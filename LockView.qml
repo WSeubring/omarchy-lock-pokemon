@@ -565,14 +565,39 @@ Item {
                 font.pixelSize: Style.font.body
               }
 
-              Text {
+              // Each type in its own color, so a dual type reads as two things
+              // rather than one accent standing in for both.
+              Row {
                 anchors.horizontalCenter: parent.horizontalCenter
-                visible: root.showPokemonLabel && root.typeLabel.length > 0 && root.typeAccents
-                text: root.typeLabel
-                color: root.accentColor
-                font.family: Style.font.family
-                font.pixelSize: root.statusFontSize
-                opacity: 0.9
+                visible: root.showPokemonLabel && root.typeAccents && root.pokemonTypes.length > 0
+                spacing: 0
+
+                Repeater {
+                  model: root.pokemonTypes
+
+                  delegate: Row {
+                    required property int index
+                    required property string modelData
+                    spacing: 0
+
+                    Text {
+                      visible: index > 0
+                      text: " / "
+                      color: root.statusColor
+                      font.family: Style.font.family
+                      font.pixelSize: root.statusFontSize
+                      opacity: 0.7
+                    }
+
+                    Text {
+                      text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                      color: Types.color(modelData, root.accentColor)
+                      font.family: Style.font.family
+                      font.pixelSize: root.statusFontSize
+                      opacity: 0.95
+                    }
+                  }
+                }
               }
             }
           }
