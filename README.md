@@ -9,17 +9,30 @@ a status strip, all driven by theme tokens.
 
 ## What it adds
 
+One card over the blurred wallpaper: sprite on the left, time and greeting on
+the right, password field across the bottom, status in the footer.
+
 - **Pokémon sprite** rendered from [`pokemon-colorscripts`](https://gitlab.com/phoneybadger/pokemon-colorscripts)
   ANSI art, converted to rich text (`Ansi.js`). A fresh random one per lock, or
   pin one by name. Missing binary = no sprite, no error.
+- **The Pokémon's types drive the chrome.** Its primary type colors the clock,
+  the glow behind the sprite and both borders; a dual type turns the borders
+  into a two-stop gradient, and the type line under the name spells it out.
+- **Ambient motion per type**: fire drifts embers upward, water and poison send
+  up bubbles, grass drops leaves, ice drops flakes, ghost and dark trail wisps,
+  psychic / bug / dragon / fairy twinkle. Flying types make the sprite hover;
+  electric types flick the card edge every few seconds. The rest stay still.
 - **Clock, date and greeting** — the greeting follows the time of day, or takes a
   literal line with `{name}` / `{pokemon}` placeholders.
-- **Status strip**: battery, uptime, keyboard layout. Each entry disappears when
+- **Status footer**: battery, uptime, keyboard layout. Each entry disappears when
   its source has nothing to say.
-- **Wrong-password shake** on the input field.
-- **Vertical scrim** over the blurred wallpaper so light backgrounds stay readable.
+- **Wrong-password shake** of the whole card.
 
-Everything is optional and every value is a token — see below.
+![dual type](docs/lock-dual-type.png)
+
+Type data ships with the plugin (`types.json`, generated from PokéAPI), so the
+lock screen never touches the network. Everything is optional and every value
+is a token — see below.
 
 ## Install
 
@@ -72,10 +85,16 @@ right under a theme that says nothing about the lock screen.
 | `pokemon-name` | random | Pin a Pokémon (`pikachu`) |
 | `pokemon-generations` | all | `pokemon-colorscripts` range syntax, e.g. `1-3` |
 | `pokemon-shiny` | `false` | Shiny sprites |
-| `pokemon-size` | `11` | px; the sprite is scaled down further to fit above the clock |
-| `field-width`, `field-height` | `381`, `67` | Password field size |
+| `pokemon-size` | `12` | Glyph px for the sprite |
+| `pokemon-height` | `170` | px the sprite is scaled to fit |
+| `pokemon-types` | `show` | Type colors on clock, glow and borders |
+| `pokemon-effects` | `show` | Ambient motion, sprite bob, border flicker |
+| `effect-intensity` | `1.0` | Scales the number of ambient shapes (`0` = none) |
+| `card-width` | `min(720, 55%)` | px |
+| `card-padding`, `card-alpha` | `30`, `0.82` | Card inset and opacity |
+| `field-height` | `60` | Password field height (it spans the card) |
 | `blur` | `1.0` | `0` leaves the wallpaper sharp |
-| `scrim-alpha` | `0.55` | `0` removes the darkening wash |
+| `scrim-alpha` | `0.5` | `0` removes the darkening wash |
 
 Stock `[lock]` color keys (`background`, `text`, `placeholder`, `text-error`,
 `border`, `border-active`, `border-error`, `border-alpha`, `selection`) keep
@@ -102,4 +121,13 @@ updates its lock plugin, diff and reapply:
 diff -u /usr/share/omarchy/shell/plugins/lock/Service.qml Service.qml
 ```
 
-`LockView.qml` and `Ansi.js` are the parts that are actually mine.
+`LockView.qml`, `Ansi.js`, `Types.js`, `Ambient.qml` and `types.json` are the
+parts that are actually mine.
+
+`types.json` maps every name `pokemon-colorscripts` knows to its types. To
+regenerate it after a new generation lands:
+
+```bash
+for i in $(seq 1 18); do curl -s "https://pokeapi.co/api/v2/type/$i" -o "type-$i.json"; done
+# then fold the per-type pokemon lists into {name: [type, ...]}
+```

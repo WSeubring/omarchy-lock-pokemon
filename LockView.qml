@@ -6,6 +6,7 @@ import Quickshell.Services.UPower
 import qs.Commons
 import qs.Ui
 import "Ansi.js" as Ansi
+import "Types.js" as Types
 
 Item {
   id: root
@@ -22,9 +23,8 @@ Item {
   property bool syncingPasswordText: false
 
   readonly property string placeholderText: "Enter Password"
-  readonly property int fieldWidth: Math.round(numberToken("field-width", 381))
-  readonly property int fieldHeight: Math.round(numberToken("field-height", 67))
   readonly property int outlineThickness: 3
+  readonly property int fieldHeight: Math.round(numberToken("field-height", 60))
   readonly property int fieldFontSize: Math.round(Style.font.heading * 1.125)
   readonly property int passwordDotFontSize: Math.round(Style.font.heading * 1.33)
   readonly property int passwordDotLetterSpacing: Math.round(Style.font.heading * 0.19)
@@ -38,23 +38,15 @@ Item {
     : 1
   readonly property bool showPasswordCursor: inputEnabled && !authenticatingPassword && failureMessage.length === 0
   readonly property bool errorState: failureMessage.length > 0
-  readonly property var inputBorderSpec: errorState
-    ? Border.surfaceSpec("lock", "border-error", Color.lock.borderError, root.outlineThickness, "border-alpha")
-    : Border.surfaceSpec("lock", "border-active", Color.lock.borderActive, root.outlineThickness, "border-alpha")
 
-  // ---------------------------------------------------------------- ricing
+  // ------------------------------------------------------------ theme tokens
 
-  // Clock/date/greeting block above the field and the status strip along the
-  // bottom. Everything here is read-only chrome: it never gates unlocking, so
-  // a source that fails to resolve just leaves its slot empty.
-  //
-  // Every knob below reads `[lock]` in shell.toml through Color.shellValues,
-  // which is the theme's generated file with ~/.config/omarchy/shell.toml
-  // merged on top. So a theme ships its own look via
-  // themes/<slug>/shell.lock.toml, and the machine-level file overrides any
-  // single key without touching the theme. Unset keys fall back to the
-  // palette-derived defaults, so the plugin still looks right under a theme
-  // that says nothing about the lock screen.
+  // Every knob reads `[lock]` in shell.toml through Color.shellValues, which is
+  // the theme's generated file with ~/.config/omarchy/shell.toml merged on top.
+  // A theme ships its look via themes/<slug>/shell.lock.toml; the machine-level
+  // file overrides any single key. Unset keys fall back to palette-derived
+  // defaults, so this still looks right under a theme that says nothing about
+  // the lock screen.
 
   function token(key, fallback) {
     var value = Color.shellValues["lock." + key]
@@ -80,14 +72,24 @@ Item {
 
   // Accepts the same values as any other shell color token: a hex string, a
   // role name (text/accent/background), or a `section.key` reference. Text
-  // can't be painted with a gradient, so pointing one of these at
-  // `hyprland.active-border` takes the gradient's first stop.
+  // can't be painted with a gradient, so a token pointing at one takes its
+  // first stop.
   function colorToken(key, fallback) {
     var value = token(key, "")
     if (value.length === 0) return fallback
-    var resolved = Border.resolveValueRef(value)
-    var stops = resolved.split(/\s+/).filter(part => part.length > 0 && !part.match(/^-?\d+(\.\d+)?deg$/))
-    return Border.cssColor(stops.length > 0 ? stops[0] : resolved, 1.0)
+    return firstColor(Border.resolveValueRef(value), fallback)
+  }
+
+  function firstColor(raw, fallback) {
+    var stops = String(raw).split(/\s+/).filter(part => part.length > 0 && !part.match(/^-?\d+(\.\d+)?deg$/))
+    return stops.length > 0 ? Border.cssColor(stops[0], 1.0) : fallback
+  }
+
+  // Border spec from a raw color/gradient string, for the two surfaces whose
+  // border can come from the Pokémon's types instead of the theme.
+  function specFrom(raw, fallbackColor, width) {
+    var resolved = Border.borderValue(String(raw), fallbackColor, 1.0, "")
+    return Border.withWidth({ color: resolved.color, gradient: resolved.gradient }, width)
   }
 
   readonly property bool showClock: flagToken("clock", true)
@@ -102,15 +104,17 @@ Item {
     return statusItems.toLowerCase().split(/[\s,]+/).indexOf(name) >= 0
   }
 
-  readonly property int clockFontSize: Math.round(numberToken("clock-size", Style.font.displayLarge * 3.0))
-  readonly property int dateFontSize: Math.round(numberToken("date-size", Style.font.heading * 1.15))
+  readonly property int clockFontSize: Math.round(numberToken("clock-size", Style.font.displayLarge * 2.4))
+  readonly property int dateFontSize: Math.round(numberToken("date-size", Style.font.heading))
   readonly property int greetingFontSize: Math.round(numberToken("greeting-size", Style.font.title))
-  readonly property int statusFontSize: Math.round(numberToken("status-size", Style.font.subtitle))
+  readonly property int statusFontSize: Math.round(numberToken("status-size", Style.font.bodySmall))
 
-  readonly property color clockColor: colorToken("clock-color", Color.lock.text)
   readonly property color dateColor: colorToken("date-color", Color.lock.placeholder)
   readonly property color greetingColor: colorToken("greeting-color", Color.lock.text)
   readonly property color statusColor: colorToken("status-color", Color.lock.placeholder)
+  // The clock defaults to the type accent, which is the one place the Pokémon
+  // reaches into the type scale rather than sitting beside it.
+  readonly property color clockColor: colorToken("clock-color", accentColor)
 
   readonly property string clockFormat: token("clock-format", "HH:mm")
   readonly property string dateFormat: token("date-format", "dddd d MMMM")
@@ -118,37 +122,60 @@ Item {
   // Wallpaper treatment. blur 0 leaves the background sharp; scrim-alpha 0
   // drops the darkening wash entirely.
   readonly property real backgroundBlur: Math.max(0, Math.min(1, numberToken("blur", 1.0)))
-  readonly property real scrimAlpha: Math.max(0, Math.min(1, numberToken("scrim-alpha", 0.55)))
+  readonly property real scrimAlpha: Math.max(0, Math.min(1, numberToken("scrim-alpha", 0.5)))
 
-  // Pokémon sprite above the clock, drawn from pokemon-colorscripts' ANSI art.
-  // `pokemon-name` pins one; unset picks a fresh random one per lock, from
-  // `pokemon-generations` (the tool's own 1-8 range/list syntax) when set.
+  // The card. Width follows the screen until it hits the cap, so this reads the
+  // same on a laptop panel and an ultrawide.
+  readonly property int cardWidth: Math.round(numberToken("card-width", Math.min(720, root.width * 0.55)))
+  readonly property int cardPadding: Math.round(numberToken("card-padding", 30))
+  readonly property real cardAlpha: Math.max(0, Math.min(1, numberToken("card-alpha", 0.82)))
+
+  // ---------------------------------------------------------------- Pokémon
+
   readonly property bool showPokemon: flagToken("pokemon", true)
+  readonly property bool showPokemonLabel: flagToken("pokemon-label", true)
   readonly property bool pokemonShiny: flagToken("pokemon-shiny", false)
-  readonly property int pokemonFontSize: Math.round(numberToken("pokemon-size", 11))
+  readonly property int pokemonFontSize: Math.round(numberToken("pokemon-size", 12))
+  readonly property int pokemonHeight: Math.round(numberToken("pokemon-height", 170))
   readonly property string pokemonName: token("pokemon-name", "")
   readonly property string pokemonGenerations: token("pokemon-generations", "")
-  // The sprite's own name, shown under it and usable in the greeting via
-  // {pokemon}. Empty until the process lands, or when nothing was drawn.
+
+  // Type-driven chrome: `pokemon-types` colors the clock, glow and borders from
+  // the Pokémon's types; `pokemon-effects` adds the ambient motion that goes
+  // with the primary type.
+  readonly property bool typeAccents: flagToken("pokemon-types", true)
+  readonly property bool typeEffects: flagToken("pokemon-effects", true)
+  readonly property real effectIntensity: Math.max(0, Math.min(2, numberToken("effect-intensity", 1.0)))
+
   property string pokemonLabel: ""
   property string pokemonArt: ""
-  property int pokemonLines: 0
+  property var pokemonTypes: []
+  property var typeTable: ({})
 
-  // Sprites run 15-30 rows depending on the Pokémon, and the column has to
-  // clear the clock block and the field. Shrink the glyph until the tallest
-  // sprite fits rather than letting it clip off the top of the screen.
-  readonly property real pokemonSpaceAbove: {
-    var textBlock = (showClock ? clockFontSize * 1.25 : 0)
-      + (showDate ? dateFontSize * 1.7 : 0)
-      + (showGreeting ? greetingFontSize * 2.8 : 0)
-      + (pokemonLabel.length > 0 ? statusFontSize * 2.4 : 0)
-    // The 0.08 term mirrors the column's bottom margin; the flat 32 keeps the
-    // tallest sprites clear of the screen edge.
-    return Math.max(0, root.height / 2 - fieldHeight / 2 - textBlock - Math.round(root.height * 0.08) - 32)
-  }
-  readonly property int fittedPokemonFontSize: pokemonLines > 0
-    ? Math.max(4, Math.min(pokemonFontSize, Math.floor(pokemonSpaceAbove / pokemonLines)))
-    : pokemonFontSize
+  readonly property color themeAccent: firstColor(Border.resolveValueRef(token("border", "hyprland.active-border")), Color.lock.borderActive)
+  readonly property color accentColor: typeAccents && pokemonTypes.length > 0
+    ? Types.color(pokemonTypes[0], themeAccent)
+    : themeAccent
+  readonly property string typeGradient: typeAccents && pokemonTypes.length > 0
+    ? Types.gradient(pokemonTypes, "")
+    : ""
+  readonly property string typeLabel: Types.label(pokemonTypes)
+  readonly property string ambientKind: typeEffects && pokemonTypes.length > 0 ? Types.effect(pokemonTypes) : "none"
+  readonly property bool spriteBobs: typeEffects && Types.trait(pokemonTypes, "bob")
+  readonly property bool borderFlickers: typeEffects && Types.trait(pokemonTypes, "flicker")
+
+  // Card and field borders: the Pokémon's types when it has them, the theme's
+  // own [lock] border otherwise.
+  readonly property var cardBorderSpec: typeGradient.length > 0
+    ? specFrom(typeGradient, accentColor, 2)
+    : Border.surfaceSpec("lock", "border", Color.lock.border, 2, "border-alpha")
+  readonly property var inputBorderSpec: errorState
+    ? Border.surfaceSpec("lock", "border-error", Color.lock.borderError, outlineThickness, "border-alpha")
+    : (typeGradient.length > 0
+      ? specFrom(typeGradient, accentColor, outlineThickness)
+      : Border.surfaceSpec("lock", "border-active", Color.lock.borderActive, outlineThickness, "border-alpha"))
+
+  // ------------------------------------------------------------ status strip
 
   property var currentTime: new Date()
   property string fullName: ""
@@ -157,8 +184,8 @@ Item {
 
   readonly property string clockText: Qt.formatDateTime(currentTime, clockFormat)
   readonly property string dateText: Qt.formatDateTime(currentTime, dateFormat)
-  // `greeting-text` takes a literal line, with {name} substituted; unset, the
-  // greeting follows the clock.
+  // `greeting-text` takes a literal line, with {name} and {pokemon}
+  // substituted; unset, the greeting follows the clock.
   readonly property string greetingText: {
     var custom = token("greeting-text", "")
     if (custom.length > 0) return custom.replace("{name}", fullName).replace("{pokemon}", pokemonLabel)
@@ -222,7 +249,7 @@ Item {
   // A new sprite per lock, not per minute — it should feel like a greeting,
   // not a slideshow.
   function drawPokemon() {
-    if (!showPokemon) { pokemonLabel = ""; pokemonArt = ""; return }
+    if (!showPokemon) { pokemonLabel = ""; pokemonArt = ""; pokemonTypes = []; return }
     if (!pokemonProc.running) pokemonProc.running = true
   }
 
@@ -263,6 +290,18 @@ Item {
     onTriggered: root.refreshChrome()
   }
 
+  // name -> [type, type]. Generated from PokéAPI, shipped with the plugin so
+  // the lock screen never waits on (or needs) the network.
+  FileView {
+    id: typeFile
+    path: String(Qt.resolvedUrl("types.json")).replace(/^file:\/\//, "")
+    watchChanges: false
+    printErrors: false
+    onLoaded: {
+      try { root.typeTable = JSON.parse(text()) } catch (error) { root.typeTable = ({}) }
+    }
+  }
+
   // GECOS full name, falling back to the login name. Nothing downstream
   // depends on it, so a missing entry just shortens the greeting.
   Process {
@@ -282,28 +321,10 @@ Item {
     }
   }
 
-  Process {
-    id: keyboardProc
-    command: ["bash", "-c", "hyprctl -j devices | jq -r '[.keyboards[] | select(.main)][0].active_keymap // empty'"]
-    stdout: StdioCollector {
-      onStreamFinished: {
-        var value = String(text).trim()
-        if (value.length === 0) { root.keyboardLayout = ""; return }
-        // "English (US)" -> "us"; anything without a parenthesised code keeps
-        // the first word so an exotic layout still reads as something.
-        var match = value.match(/\(([^)]+)\)/)
-        var code = match ? match[1] : value
-        root.keyboardLayout = code.split(",")[0].trim().toLowerCase().substring(0, 8)
-      }
-    }
-  }
-
-  // Prints the chosen name on the first line, then the sprite. Absent binary,
-  // unknown name or a failed draw all end the same way: no sprite, no error.
+  // pokemon-colorscripts prints the name on its own first line, then the
+  // sprite, which is exactly the split this parses.
   Process {
     id: pokemonProc
-    // pokemon-colorscripts prints the name on its own first line, then the
-    // sprite, which is exactly the split this parses.
     command: ["bash", "-c",
       "command -v pokemon-colorscripts >/dev/null || exit 0; " +
       "if [ -n \"$POKEMON_NAME\" ]; then " +
@@ -319,13 +340,27 @@ Item {
     stdout: StdioCollector {
       onStreamFinished: {
         var lines = String(text).split("\n")
-        if (lines.length < 2) { root.pokemonLabel = ""; root.pokemonArt = ""; return }
+        if (lines.length < 2) { root.pokemonLabel = ""; root.pokemonArt = ""; root.pokemonTypes = []; return }
         var name = lines.shift().trim()
         root.pokemonLabel = name.length > 0 ? name.charAt(0).toUpperCase() + name.slice(1) : ""
-        // Count first so fittedPokemonFontSize is settled before the art is
-        // rendered at that size.
-        root.pokemonLines = lines.filter(line => line.trim().length > 0).length
-        root.pokemonArt = Ansi.toRichText(lines.join("\n"), root.fittedPokemonFontSize)
+        root.pokemonTypes = root.typeTable[name] || []
+        root.pokemonArt = Ansi.toRichText(lines.join("\n"), root.pokemonFontSize)
+      }
+    }
+  }
+
+  Process {
+    id: keyboardProc
+    command: ["bash", "-c", "hyprctl -j devices | jq -r '[.keyboards[] | select(.main)][0].active_keymap // empty'"]
+    stdout: StdioCollector {
+      onStreamFinished: {
+        var value = String(text).trim()
+        if (value.length === 0) { root.keyboardLayout = ""; return }
+        // "English (US)" -> "us"; anything without a parenthesised code keeps
+        // the first word so an exotic layout still reads as something.
+        var match = value.match(/\(([^)]+)\)/)
+        var code = match ? match[1] : value
+        root.keyboardLayout = code.split(",")[0].trim().toLowerCase().substring(0, 8)
       }
     }
   }
@@ -378,16 +413,12 @@ Item {
       contrast: -0.08
     }
 
-    // Vertical scrim: darkest at the top and bottom edges where the clock and
-    // the status strip sit, so light wallpapers keep the text readable.
+    // Even wash rather than a vertical ramp: the card carries the contrast now,
+    // so the background only needs to stop competing with it.
     Rectangle {
       anchors.fill: parent
       visible: root.scrimAlpha > 0
-      gradient: Gradient {
-        GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, root.scrimAlpha) }
-        GradientStop { position: 0.45; color: Qt.rgba(0, 0, 0, root.scrimAlpha * 0.45) }
-        GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, root.scrimAlpha * 1.1) }
-      }
+      color: Qt.rgba(0, 0, 0, root.scrimAlpha)
     }
 
     MouseArea {
@@ -397,222 +428,321 @@ Item {
       onPositionChanged: root.wakeRequested()
     }
 
-    // Clock, date and greeting, hung above the password field so the three
-    // blocks read as one centered column.
-    Column {
-      id: clockColumn
-      anchors.horizontalCenter: parent.horizontalCenter
-      anchors.bottom: inputField.top
-      anchors.bottomMargin: Math.round(root.height * 0.08)
-      spacing: 6
-
-      // Sprite drawn as rich text: one <span> per colored half-block run, at a
-      // fixed line height so the blocks stack seamlessly. Rich text line
-      // metrics vary per font, so the final fit is done by scaling the
-      // rendered item down to whatever room is left above the clock.
-      Item {
-        anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showPokemon && root.pokemonArt.length > 0
-        implicitWidth: sprite.implicitWidth * sprite.scale
-        implicitHeight: sprite.implicitHeight * sprite.scale + 8
-
-        Text {
-          id: sprite
-          anchors.horizontalCenter: parent.horizontalCenter
-          text: root.pokemonArt
-          textFormat: Text.RichText
-          horizontalAlignment: Text.AlignHCenter
-          font.family: Style.font.family
-          font.pixelSize: root.fittedPokemonFontSize
-          transformOrigin: Item.Top
-          scale: implicitHeight > 0 ? Math.min(1, root.pokemonSpaceAbove / implicitHeight) : 1
-        }
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showPokemon && root.pokemonLabel.length > 0 && root.flagToken("pokemon-label", true)
-        text: root.pokemonLabel
-        color: root.statusColor
-        font.family: Style.font.family
-        font.pixelSize: root.statusFontSize
-        bottomPadding: 10
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showClock
-        text: root.clockText
-        color: root.clockColor
-        font.family: Style.font.family
-        font.pixelSize: root.clockFontSize
-        font.weight: Font.Light
-        font.letterSpacing: -2
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showDate
-        text: root.dateText
-        color: root.dateColor
-        font.family: Style.font.family
-        font.pixelSize: root.dateFontSize
-      }
-
-      Item { width: 1; height: 10; visible: root.showGreeting }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showGreeting
-        text: root.greetingText
-        color: root.greetingColor
-        font.family: Style.font.family
-        font.pixelSize: root.greetingFontSize
-        opacity: 0.85
-      }
-    }
-
     BorderSurface {
-      id: inputField
-      width: root.fieldWidth
-      height: root.fieldHeight
+      id: card
+      width: root.cardWidth
+      height: cardContent.implicitHeight + root.cardPadding * 2
       anchors.centerIn: parent
       anchors.horizontalCenterOffset: shakeOffset
-      color: Color.lock.background
-      borderSpec: root.inputBorderSpec
-      radius: Style.cornerRadius
+      color: Qt.rgba(Color.lock.background.r, Color.lock.background.g, Color.lock.background.b, root.cardAlpha)
+      borderSpec: root.cardBorderSpec
+      radius: Style.cornerRadius > 0 ? Style.cornerRadius + 4 : 0
       clip: true
 
-      // Wrong password: a short lateral shake instead of only swapping the
-      // border to the error color, so the failure registers peripherally.
+      // Wrong password: a short lateral shake of the whole card instead of only
+      // swapping the field's border color, so the failure registers
+      // peripherally.
       property real shakeOffset: 0
 
       SequentialAnimation {
         id: shakeAnimation
         loops: 2
-        NumberAnimation { target: inputField; property: "shakeOffset"; to: -14; duration: 55; easing.type: Easing.OutQuad }
-        NumberAnimation { target: inputField; property: "shakeOffset"; to: 14; duration: 90; easing.type: Easing.InOutQuad }
-        NumberAnimation { target: inputField; property: "shakeOffset"; to: 0; duration: 55; easing.type: Easing.InQuad }
+        NumberAnimation { target: card; property: "shakeOffset"; to: -14; duration: 55; easing.type: Easing.OutQuad }
+        NumberAnimation { target: card; property: "shakeOffset"; to: 14; duration: 90; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: card; property: "shakeOffset"; to: 0; duration: 55; easing.type: Easing.InQuad }
       }
 
-      TextInput {
-        id: passwordInput
+      // Ambient type motion, behind everything and clipped to the card.
+      Ambient {
         anchors.fill: parent
-        anchors.topMargin: inputField.borderTop
-        // Reserve the fingerprint icon's width on both sides so the centered
-        // dots stay symmetric and never slide under the icon as they grow.
-        anchors.rightMargin: inputField.borderRight + 18 + root.fingerprintReserve
-        anchors.bottomMargin: inputField.borderBottom
-        anchors.leftMargin: inputField.borderLeft + 18 + root.fingerprintReserve
-        verticalAlignment: TextInput.AlignVCenter
-        horizontalAlignment: TextInput.AlignHCenter
-        activeFocusOnPress: true
-        clip: true
-        enabled: root.inputEnabled && !root.authenticatingPassword
-        readOnly: root.authenticatingPassword
-        echoMode: TextInput.Password
-        passwordCharacter: "●"
-        passwordMaskDelay: 0
-        color: Color.lock.text
-        selectionColor: Color.lock.selection
-        selectedTextColor: Color.lock.text
-        font.family: Style.font.family
-        font.pixelSize: text.length > 0 ? Math.max(1, Math.floor(root.passwordDotFontSize * root.passwordDotScale)) : root.fieldFontSize
-        font.letterSpacing: text.length > 0 ? root.passwordDotLetterSpacing * root.passwordDotScale : 0
-        cursorVisible: activeFocus && root.showPasswordCursor && text.length > 0
-        cursorDelegate: Rectangle {
-          width: 2
-          color: Color.lock.text
-          visible: passwordInput.cursorVisible
-        }
+        kind: root.ambientKind
+        tint: root.accentColor
+        intensity: root.effectIntensity
+      }
 
-        onTextChanged: {
-          if (!root.syncingPasswordText) root.passwordTextEdited(text)
-          if (text.length > 0) {
-            root.wakeRequested()
-          }
-          if (text.length > 0 && root.failureMessage.length > 0) root.clearFailureRequested()
-        }
+      // Electric types flick the card's edge every few seconds.
+      Rectangle {
+        id: flickerEdge
+        anchors.fill: parent
+        radius: card.radius
+        color: "transparent"
+        border.width: 2
+        border.color: root.accentColor
+        opacity: 0
+        visible: root.borderFlickers
 
-        onAccepted: {
-          var submitted = root.passwordText
-          root.passwordTextEdited("")
-          if (submitted.length > 0) root.submitPassword(submitted)
-        }
-
-        Keys.onPressed: function(event) {
-          root.wakeRequested()
-          if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
-            root.passwordTextEdited("")
-            event.accepted = true
-          }
+        SequentialAnimation {
+          running: flickerEdge.visible
+          loops: Animation.Infinite
+          PauseAnimation { duration: 3400 }
+          NumberAnimation { target: flickerEdge; property: "opacity"; to: 0.9; duration: 60 }
+          NumberAnimation { target: flickerEdge; property: "opacity"; to: 0.1; duration: 90 }
+          NumberAnimation { target: flickerEdge; property: "opacity"; to: 0.7; duration: 70 }
+          NumberAnimation { target: flickerEdge; property: "opacity"; to: 0; duration: 500 }
         }
       }
 
-      Text {
-        anchors.fill: passwordInput
-        text: root.authenticatingPassword ? "Checking…" : (root.failureMessage.length > 0 ? root.failureMessage : root.placeholderText)
-        visible: passwordInput.text.length === 0
-        color: root.authenticatingPassword ? Color.lock.text : (root.failureMessage.length > 0 ? Color.lock.textError : Color.lock.placeholder)
-        font.family: Style.font.family
-        font.pixelSize: root.fieldFontSize
-        font.italic: !root.authenticatingPassword && root.failureMessage.length > 0
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
-      }
-
-      // Fingerprint hint pinned inside the field's right edge when a sensor is
-      // enrolled, so the user knows they can touch to unlock instead of typing.
-      // Matches hyprlock, which draws its fingerprint icon in the same spot.
-      Text {
-        id: fingerprintIcon
-        objectName: "fingerprintIndicator"
+      Column {
+        id: cardContent
+        anchors.left: parent.left
         anchors.right: parent.right
-        anchors.rightMargin: inputField.borderRight + 18
-        anchors.verticalCenter: parent.verticalCenter
-        visible: root.fingerprintConfigured
-        text: "󰈷"
-        color: Color.lock.placeholder
-        font.family: Style.font.family
-        font.pixelSize: Math.round(root.fieldFontSize * 1.1)
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-      }
-    }
+        anchors.top: parent.top
+        anchors.margins: root.cardPadding
+        spacing: 24
 
-    // Status strip: battery, uptime, keyboard layout. Each entry drops out of
-    // the row when its source has nothing to say (no battery on a desktop, a
-    // Hyprland that won't name the layout).
-    Row {
-      visible: root.showStatus
-      anchors.horizontalCenter: parent.horizontalCenter
-      anchors.bottom: parent.bottom
-      anchors.bottomMargin: Math.round(root.numberToken("status-margin", 48))
-      spacing: Math.round(root.numberToken("status-gap", 26))
+        // Sprite on the left, the time and the greeting on the right.
+        Row {
+          id: header
+          width: parent.width
+          spacing: 26
 
-      Text {
-        visible: root.statusEnabled("battery") && root.batteryText.length > 0
-        text: root.batteryText
-        color: root.statusColor
-        font.family: Style.font.family
-        font.pixelSize: root.statusFontSize
-      }
+          Item {
+            id: spriteSlot
+            width: root.showPokemon && root.pokemonArt.length > 0 ? Math.max(sprite.implicitWidth * sprite.scale, 150) : 0
+            height: root.showPokemon && root.pokemonArt.length > 0 ? spriteColumn.implicitHeight : 0
+            visible: width > 0
+            anchors.verticalCenter: parent.verticalCenter
 
-      Text {
-        visible: root.statusEnabled("uptime") && root.uptimeText.length > 0
-        text: "󰅐 " + root.uptimeText
-        color: root.statusColor
-        font.family: Style.font.family
-        font.pixelSize: root.statusFontSize
-      }
+            Column {
+              id: spriteColumn
+              width: parent.width
+              spacing: 6
 
-      Text {
-        visible: root.statusEnabled("keyboard") && root.keyboardLayout.length > 0
-        text: "󰌌 " + root.keyboardLayout
-        color: root.statusColor
-        font.family: Style.font.family
-        font.pixelSize: root.statusFontSize
+              Item {
+                width: parent.width
+                height: sprite.implicitHeight * sprite.scale
+
+                // Soft type-colored glow, sitting under the sprite so it reads
+                // as light coming off it rather than a shape of its own.
+                Rectangle {
+                  anchors.centerIn: sprite
+                  width: Math.max(sprite.width * sprite.scale, 120) * 0.9
+                  height: width
+                  radius: width / 2
+                  color: root.accentColor
+                  opacity: root.typeAccents ? 0.16 : 0.0
+                  layer.enabled: true
+                  layer.effect: MultiEffect {
+                    blurEnabled: true
+                    blur: 1.0
+                    blurMax: 64
+                  }
+                }
+
+                // Sprite drawn as rich text: one <span> per colored half-block
+                // run, at a fixed line height so the blocks stack seamlessly.
+                // Rich-text line metrics vary per font, so the final fit is a
+                // scale down to `pokemon-height`.
+                Text {
+                  id: sprite
+                  anchors.horizontalCenter: parent.horizontalCenter
+                  y: bobOffset
+                  text: root.pokemonArt
+                  textFormat: Text.RichText
+                  horizontalAlignment: Text.AlignHCenter
+                  font.family: Style.font.family
+                  font.pixelSize: root.pokemonFontSize
+                  transformOrigin: Item.Top
+                  scale: implicitHeight > 0 ? Math.min(1, root.pokemonHeight / implicitHeight) : 1
+
+                  // Flying types hover.
+                  property real bobOffset: 0
+                  SequentialAnimation {
+                    running: root.spriteBobs
+                    loops: Animation.Infinite
+                    NumberAnimation { target: sprite; property: "bobOffset"; to: -7; duration: 1600; easing.type: Easing.InOutSine }
+                    NumberAnimation { target: sprite; property: "bobOffset"; to: 0; duration: 1600; easing.type: Easing.InOutSine }
+                  }
+                }
+              }
+
+              Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.showPokemonLabel && root.pokemonLabel.length > 0
+                text: root.pokemonLabel
+                color: Color.lock.text
+                font.family: Style.font.family
+                font.pixelSize: Style.font.body
+              }
+
+              Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.showPokemonLabel && root.typeLabel.length > 0 && root.typeAccents
+                text: root.typeLabel
+                color: root.accentColor
+                font.family: Style.font.family
+                font.pixelSize: root.statusFontSize
+                opacity: 0.9
+              }
+            }
+          }
+
+          Column {
+            width: parent.width - spriteSlot.width - (spriteSlot.visible ? header.spacing : 0)
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+
+            Text {
+              visible: root.showClock
+              text: root.clockText
+              color: root.clockColor
+              font.family: Style.font.family
+              font.pixelSize: root.clockFontSize
+              font.weight: Font.Light
+              font.letterSpacing: -2
+            }
+
+            Text {
+              visible: root.showDate
+              text: root.dateText
+              color: root.dateColor
+              font.family: Style.font.family
+              font.pixelSize: root.dateFontSize
+            }
+
+            Item { width: 1; height: 8; visible: root.showGreeting }
+
+            Text {
+              visible: root.showGreeting
+              width: parent.width
+              text: root.greetingText
+              color: root.greetingColor
+              font.family: Style.font.family
+              font.pixelSize: root.greetingFontSize
+              elide: Text.ElideRight
+              opacity: 0.85
+            }
+          }
+        }
+
+        BorderSurface {
+          id: inputField
+          width: parent.width
+          height: root.fieldHeight
+          color: Qt.rgba(Color.lock.background.r, Color.lock.background.g, Color.lock.background.b, 0.55)
+          borderSpec: root.inputBorderSpec
+          radius: Style.cornerRadius
+          clip: true
+
+          TextInput {
+            id: passwordInput
+            anchors.fill: parent
+            anchors.topMargin: inputField.borderTop
+            // Reserve the fingerprint icon's width on both sides so the
+            // centered dots stay symmetric and never slide under the icon as
+            // they grow.
+            anchors.rightMargin: inputField.borderRight + 18 + root.fingerprintReserve
+            anchors.bottomMargin: inputField.borderBottom
+            anchors.leftMargin: inputField.borderLeft + 18 + root.fingerprintReserve
+            verticalAlignment: TextInput.AlignVCenter
+            horizontalAlignment: TextInput.AlignHCenter
+            activeFocusOnPress: true
+            clip: true
+            enabled: root.inputEnabled && !root.authenticatingPassword
+            readOnly: root.authenticatingPassword
+            echoMode: TextInput.Password
+            passwordCharacter: "●"
+            passwordMaskDelay: 0
+            color: Color.lock.text
+            selectionColor: Color.lock.selection
+            selectedTextColor: Color.lock.text
+            font.family: Style.font.family
+            font.pixelSize: text.length > 0 ? Math.max(1, Math.floor(root.passwordDotFontSize * root.passwordDotScale)) : root.fieldFontSize
+            font.letterSpacing: text.length > 0 ? root.passwordDotLetterSpacing * root.passwordDotScale : 0
+            cursorVisible: activeFocus && root.showPasswordCursor && text.length > 0
+            cursorDelegate: Rectangle {
+              width: 2
+              color: Color.lock.text
+              visible: passwordInput.cursorVisible
+            }
+
+            onTextChanged: {
+              if (!root.syncingPasswordText) root.passwordTextEdited(text)
+              if (text.length > 0) {
+                root.wakeRequested()
+              }
+              if (text.length > 0 && root.failureMessage.length > 0) root.clearFailureRequested()
+            }
+
+            onAccepted: {
+              var submitted = root.passwordText
+              root.passwordTextEdited("")
+              if (submitted.length > 0) root.submitPassword(submitted)
+            }
+
+            Keys.onPressed: function(event) {
+              root.wakeRequested()
+              if (event.key === Qt.Key_Escape || (event.modifiers & Qt.ControlModifier && event.key === Qt.Key_U)) {
+                root.passwordTextEdited("")
+                event.accepted = true
+              }
+            }
+          }
+
+          Text {
+            anchors.fill: passwordInput
+            text: root.authenticatingPassword ? "Checking…" : (root.failureMessage.length > 0 ? root.failureMessage : root.placeholderText)
+            visible: passwordInput.text.length === 0
+            color: root.authenticatingPassword ? Color.lock.text : (root.failureMessage.length > 0 ? Color.lock.textError : Color.lock.placeholder)
+            font.family: Style.font.family
+            font.pixelSize: root.fieldFontSize
+            font.italic: !root.authenticatingPassword && root.failureMessage.length > 0
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+          }
+
+          // Fingerprint hint pinned inside the field's right edge when a sensor
+          // is enrolled, so the user knows they can touch to unlock instead of
+          // typing. Matches hyprlock, which draws its icon in the same spot.
+          Text {
+            id: fingerprintIcon
+            objectName: "fingerprintIndicator"
+            anchors.right: parent.right
+            anchors.rightMargin: inputField.borderRight + 18
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.fingerprintConfigured
+            text: "󰈷"
+            color: Color.lock.placeholder
+            font.family: Style.font.family
+            font.pixelSize: Math.round(root.fieldFontSize * 1.1)
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+          }
+        }
+
+        // Card footer: battery, uptime, keyboard layout. Each entry drops out
+        // when its source has nothing to say (no battery on a desktop, a
+        // Hyprland that won't name the layout).
+        Row {
+          visible: root.showStatus
+          width: parent.width
+          spacing: Math.round(root.numberToken("status-gap", 22))
+
+          Text {
+            visible: root.statusEnabled("battery") && root.batteryText.length > 0
+            text: root.batteryText
+            color: root.statusColor
+            font.family: Style.font.family
+            font.pixelSize: root.statusFontSize
+          }
+
+          Text {
+            visible: root.statusEnabled("uptime") && root.uptimeText.length > 0
+            text: "󰅐 " + root.uptimeText
+            color: root.statusColor
+            font.family: Style.font.family
+            font.pixelSize: root.statusFontSize
+          }
+
+          Text {
+            visible: root.statusEnabled("keyboard") && root.keyboardLayout.length > 0
+            text: "󰌌 " + root.keyboardLayout
+            color: root.statusColor
+            font.family: Style.font.family
+            font.pixelSize: root.statusFontSize
+          }
+        }
       }
     }
   }
