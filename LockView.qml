@@ -104,6 +104,9 @@ Item {
   readonly property string statusItems: token("status-items", "")
 
   function statusEnabled(name) {
+    // `battery-style = "text"` puts the battery back in the strip without
+    // needing status-items spelled out as well.
+    if (name === "battery" && batteryStyle === "text") return true
     return statusItems.toLowerCase().split(/[\s,]+/).indexOf(name) >= 0
   }
 
