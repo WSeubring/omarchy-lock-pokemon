@@ -202,13 +202,22 @@ Item {
     ? Types.gradient(pokemonTypes, "")
     : ""
   readonly property string typeLabel: Types.label(pokemonTypes)
-  readonly property string ambientKind: typeEffects && pokemonTypes.length > 0 ? Types.effect(pokemonTypes) : "none"
+  // `effect-<type>` swaps the behaviour a type uses, e.g.
+  // `effect-electric = "strikes"` for lightning bolts instead of sparks.
+  function effectFor(typeName, fallback) {
+    if (!typeName) return fallback
+    return token("effect-" + String(typeName).toLowerCase(), fallback)
+  }
+
+  readonly property string ambientKind: typeEffects && pokemonTypes.length > 0
+    ? effectFor(pokemonTypes[0], Types.effect(pokemonTypes))
+    : "none"
   // A dual type layers its second effect underneath the first, at a lower
   // density so the card reads as one atmosphere rather than two competing
   // weathers. `dual-effects = hide` goes back to primary-only.
   readonly property bool dualEffects: flagToken("dual-effects", true)
   readonly property string secondaryKind: (typeEffects && dualEffects && pokemonTypes.length > 1)
-    ? Types.secondaryEffect(pokemonTypes) : "none"
+    ? effectFor(pokemonTypes[1], Types.secondaryEffect(pokemonTypes)) : "none"
   readonly property color secondaryAccent: pokemonTypes.length > 1
     ? Types.color(pokemonTypes[1], accentColor) : accentColor
   readonly property real dualStrength: Math.max(0, Math.min(1, numberToken("dual-effect-strength", 0.55)))

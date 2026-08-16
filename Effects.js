@@ -17,9 +17,10 @@
 //               streak  long thin dash crossing fast
 //               orbit   circles a point on the card
 //               spiral  swirls inward and vanishes at the centre
+//               strike  a bolt that flashes into place, then a long dark wait
 //               zigzag  rises while tacking side to side
 //               settle  falls, then piles up and fades at the floor
-//   shape     "dot" | "ring" | "leaf" | "bar" (flying only) | "chip"
+//   shape     "dot" | "ring" | "leaf" | "bar" (flying only) | "chip" | "bolt"
 //   spread    px of lateral wander over the cycle
 //   spin      degrees of rotation over the cycle
 
@@ -28,13 +29,14 @@ var BASE = {
   motes:    { count: 10, size: 3,  duration: 14000, opacity: 0.22, motion: "drift",  shape: "dot",  spread: 80,  spin: 0 },
   embers:   { count: 12, size: 3,  duration: 5000,  opacity: 0.75, motion: "rise",   shape: "dot",  spread: 90,  spin: 0 },
   bubbles:  { count: 12, size: 9,  duration: 9000,  opacity: 0.35, motion: "rise",   shape: "ring", spread: 90,  spin: 0 },
+  // sparks is the quieter alternate for electric: `effect-electric = "sparks"`.
   sparks:   { count: 16, size: 3,  duration: 900,   opacity: 0.9,  motion: "hold",   shape: "bar",  spread: 0,   spin: 0 },
   leaves:   { count: 12, size: 6,  duration: 8000,  opacity: 0.6,  motion: "fall",   shape: "leaf", spread: 140, spin: 200 },
   flakes:   { count: 14, size: 3,  duration: 11000, opacity: 0.55, motion: "fall",   shape: "dot",  spread: 40,  spin: 0 },
   impact:   { count: 5,  size: 46, duration: 2600,  opacity: 0.3,  motion: "expand", shape: "ring", spread: 0,   spin: 0 },
   smog:     { count: 7,  size: 46, duration: 12000, opacity: 0.14, motion: "rise",   shape: "dot",  spread: 120, spin: 0 },
   grit:     { count: 16, size: 3,  duration: 5200,  opacity: 0.4,  motion: "settle", shape: "chip", spread: 30,  spin: 0 },
-  gusts:    { count: 7,  size: 40, duration: 2600,  opacity: 0.28, motion: "streak", shape: "bar",  spread: 40,  spin: 0 },
+  gusts:    { count: 4,  size: 62, duration: 4600,  opacity: 0.12, motion: "streak", shape: "bar",  spread: 30,  spin: 0 },
   ripples:  { count: 4,  size: 90, duration: 5200,  opacity: 0.22, motion: "expand", shape: "ring", spread: 0,   spin: 0 },
   flit:     { count: 12, size: 3,  duration: 5200,  opacity: 0.6,  motion: "zigzag", shape: "dot",  spread: 70,  spin: 0 },
   rubble:   { count: 7,  size: 7,  duration: 13000, opacity: 0.5,  motion: "orbit",  shape: "chip", spread: 150, spin: 220 },
@@ -42,7 +44,9 @@ var BASE = {
   vortex:   { count: 18, size: 6,  duration: 5200,  opacity: 0.85, motion: "spiral", shape: "dot",  spread: 270, spin: 0 },
   gloom:    { count: 5,  size: 130,duration: 9000,  opacity: 0.2,  motion: "hold",   shape: "dot",  spread: 0,   spin: 0 },
   plates:   { count: 8,  size: 26, duration: 5200,  opacity: 0.18, motion: "hold",   shape: "chip", spread: 0,   spin: 0 },
-  twinkles: { count: 12, size: 3,  duration: 1600,  opacity: 0.85, motion: "hold",   shape: "dot",  spread: 0,   spin: 0 }
+  twinkles: { count: 12, size: 3,  duration: 1600,  opacity: 0.85, motion: "hold",   shape: "dot",  spread: 0,   spin: 0 },
+
+  strikes:  { count: 3,  size: 130,duration: 3000,  opacity: 0.9,  motion: "strike", shape: "bolt", spread: 0,   spin: 0 }
 }
 
 // Three takes on every effect, as multipliers rather than eighteen more hand

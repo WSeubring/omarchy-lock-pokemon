@@ -49,6 +49,7 @@ Item {
 
       Rectangle {
         id: dot
+        visible: cfg.shape !== "bolt"
         anchors.centerIn: parent
         width: {
           var base = cfg.size * (0.6 + shape.seed * 0.8)
@@ -57,7 +58,7 @@ Item {
         }
         height: {
           if (cfg.shape === "leaf") return Math.max(2, width * 0.55)
-          if (cfg.shape === "bar") return Math.max(2, cfg.motion === "sweep" ? root.height * 1.6 : cfg.size * 0.12)
+          if (cfg.shape === "bar") return Math.max(1, cfg.motion === "sweep" ? root.height * 1.6 : cfg.size * 0.045)
           if (cfg.shape === "chip") return Math.max(2, width * 0.8)
           return width
         }
@@ -247,6 +248,77 @@ Item {
             NumberAnimation { target: dot; property: "opacity"; to: 0; duration: Math.round(shape.span * 0.25) }
           }
         }
+      }
+
+      // strike: a lightning bolt. The path is regenerated before every flash,
+      // so no two strikes take the same route down the card, and the long dark
+      // gap between them is what makes each one land.
+      Canvas {
+        id: bolt
+        visible: cfg.shape === "bolt"
+        width: Math.max(24, cfg.size * 0.35)
+        height: cfg.size
+        x: -width / 2
+        y: -height / 2
+        opacity: 0
+        antialiasing: true
+
+        property var joints: []
+
+        function reroute() {
+          var points = []
+          var segments = 5 + Math.round(Math.random() * 2)
+          for (var i = 0; i <= segments; i++) {
+            points.push({
+              x: width / 2 + (Math.random() - 0.5) * width * (i === 0 || i === segments ? 0.2 : 1.0),
+              y: height * (i / segments)
+            })
+          }
+          joints = points
+          requestPaint()
+        }
+
+        onPaint: {
+          var ctx = getContext("2d")
+          ctx.clearRect(0, 0, width, height)
+          if (joints.length < 2) return
+          // Wide soft pass first, then the hot core on top.
+          for (var pass = 0; pass < 2; pass++) {
+            ctx.beginPath()
+            ctx.lineWidth = pass === 0 ? 6 : 2
+            ctx.globalAlpha = pass === 0 ? 0.25 : 1.0
+            ctx.strokeStyle = root.tint
+            ctx.lineJoin = "round"
+            ctx.lineCap = "round"
+            ctx.moveTo(joints[0].x, joints[0].y)
+            for (var i = 1; i < joints.length; i++) ctx.lineTo(joints[i].x, joints[i].y)
+            ctx.stroke()
+          }
+        }
+
+        onWidthChanged: reroute()
+        onHeightChanged: reroute()
+        Component.onCompleted: reroute()
+      }
+
+      SequentialAnimation {
+        running: root.visible && shape.motion === "strike"
+        loops: Animation.Infinite
+        PauseAnimation { duration: shape.stagger }
+        ScriptAction {
+          script: {
+            shape.x = root.width * (0.1 + Math.random() * 0.8)
+            // Start above the card lip so the bolt reads as coming down into it.
+            shape.y = root.height * (-0.05 + Math.random() * 0.3)
+            bolt.reroute()
+          }
+        }
+        // Two quick flashes, the way real lightning strikes twice.
+        NumberAnimation { target: bolt; property: "opacity"; to: cfg.opacity; duration: 40 }
+        NumberAnimation { target: bolt; property: "opacity"; to: 0.1; duration: 70 }
+        NumberAnimation { target: bolt; property: "opacity"; to: cfg.opacity * 0.85; duration: 50 }
+        NumberAnimation { target: bolt; property: "opacity"; to: 0; duration: 260 }
+        PauseAnimation { duration: shape.span }
       }
 
       // hold: stays put and pulses — twinkles, and the electric sparks, which

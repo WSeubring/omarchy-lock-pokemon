@@ -13,7 +13,7 @@ var TABLE = {
   normal:   { color: "#a8a77a", effect: "motes" },
   fire:     { color: "#ee8130", effect: "embers" },
   water:    { color: "#6390f0", effect: "bubbles" },
-  electric: { color: "#f7d02c", effect: "sparks", flicker: true },
+  electric: { color: "#f7d02c", effect: "strikes", flicker: true },
   grass:    { color: "#7ac74c", effect: "leaves" },
   ice:      { color: "#96d9d6", effect: "flakes" },
   fighting: { color: "#c22e28", effect: "impact" },
