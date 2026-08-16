@@ -534,6 +534,9 @@ Item {
 
     Image {
       id: wallpaper
+      // Drawn only through the effect below, never directly: showing the sharp
+      // image first and blurring it a frame later was half the pop-in.
+      visible: false
       anchors.fill: parent
       source: root.loadBackground ? root.fileUrl(root.backgroundPath) : ""
       fillMode: Image.PreserveAspectCrop
@@ -547,6 +550,12 @@ Item {
       anchors.fill: wallpaper
       source: wallpaper
       autoPaddingEnabled: false
+      // Fade up once the image is decoded, so the lock opens on the theme
+      // background and eases into the wallpaper instead of snapping to it.
+      opacity: wallpaper.status === Image.Ready ? 1 : 0
+      Behavior on opacity {
+        NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+      }
       blurEnabled: root.loadBackground && wallpaper.status === Image.Ready && root.backgroundBlur > 0
       blur: root.backgroundBlur
       blurMax: 128
@@ -660,14 +669,46 @@ Item {
       id: card
       width: root.cardWidth
       height: cardContent.implicitHeight + root.cardPadding * 2
+
+      Behavior on height {
+        NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+      }
       anchors.centerIn: parent
       anchors.horizontalCenterOffset: shakeOffset + tremorOffset
-      // `hero` drops the card below centre to leave the clock the top half.
-      anchors.verticalCenterOffset: root.layoutMode === "hero" ? Math.round(root.height * 0.12) : 0
+      // `hero` drops the card below centre to leave the clock the top half;
+      // entranceOffset rides on top of that as the lock opens.
       color: root.cardColor
       borderSpec: root.cardBorderSpec
       radius: Style.cornerRadius > 0 ? Style.cornerRadius + 4 : 0
       clip: true
+
+      // Entrance: the card eases up into place as the lock opens, which reads
+      // as deliberate where an instant appearance read as a pop.
+      opacity: root.loadBackground ? 1 : 0
+      anchors.verticalCenterOffset: (root.layoutMode === "hero" ? Math.round(root.height * 0.12) : 0) + entranceOffset
+      property real entranceOffset: 10
+
+      Behavior on opacity {
+        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+      }
+
+      Connections {
+        target: root
+        function onLoadBackgroundChanged() {
+          if (root.loadBackground) entranceAnimation.restart()
+        }
+      }
+
+      NumberAnimation {
+        id: entranceAnimation
+        target: card
+        property: "entranceOffset"
+        from: 10
+        to: 0
+        duration: 260
+        easing.type: Easing.OutCubic
+        running: root.loadBackground
+      }
 
       // Wrong password: a short lateral shake of the whole card instead of only
       // swapping the field's border color, so the failure registers
@@ -754,15 +795,24 @@ Item {
 
           Item {
             id: spriteSlot
-            width: root.showPokemon && root.pokemonArt.length > 0 ? Math.max(sprite.implicitWidth * sprite.scale, 150) : 0
-            height: root.showPokemon && root.pokemonArt.length > 0 ? spriteColumn.implicitHeight : 0
-            visible: width > 0
+            // Sized from the tokens rather than from the sprite, so the card is
+            // its final size before the sprite process has answered. Waiting
+            // for the art meant the card grew under you a beat after the lock
+            // appeared.
+            width: root.showPokemon ? Math.max(sprite.implicitWidth * sprite.scale, 150) : 0
+            height: root.showPokemon ? Math.max(spriteColumn.implicitHeight, root.pokemonHeight + 44) : 0
+            visible: root.showPokemon
             anchors.verticalCenter: parent.verticalCenter
 
             Column {
               id: spriteColumn
               width: parent.width
               spacing: 6
+              opacity: root.pokemonArt.length > 0 || !root.showPokemon ? 1 : 0
+
+              Behavior on opacity {
+                NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+              }
 
               Item {
                 width: parent.width
@@ -809,6 +859,12 @@ Item {
                   font.pixelSize: root.pokemonFontSize
                   transformOrigin: Item.Top
                   scale: implicitHeight > 0 ? Math.min(1, root.pokemonHeight / implicitHeight) : 1
+                  // The art lands a beat after the card does; fading covers the
+                  // gap and the scale settling with it.
+                  opacity: root.pokemonArt.length > 0 ? 1 : 0
+                  Behavior on opacity {
+                    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+                  }
 
                   // Flying types hover.
                   property real bobOffset: 0
