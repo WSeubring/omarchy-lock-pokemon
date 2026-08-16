@@ -130,6 +130,29 @@ Item {
   readonly property int cardPadding: Math.round(numberToken("card-padding", 30))
   readonly property real cardAlpha: Math.max(0, Math.min(1, numberToken("card-alpha", 0.82)))
 
+  // How the pieces are arranged:
+  //   card        everything inside one card
+  //   clock-above the clock and date sit on the wallpaper above the card
+  //   hero        clock anchored high on the screen, compact card below it
+  readonly property string layoutMode: token("layout", "card").toLowerCase()
+  readonly property bool clockInCard: layoutMode === "card"
+
+  // A wash of the theme (or the Pokémon's type) mixed into the card, so the
+  // card belongs to the palette instead of being a neutral grey box on top of
+  // it. `tint-source` picks which color does the tinting.
+  readonly property real cardTint: Math.max(0, Math.min(1, numberToken("card-tint", 0.12)))
+  readonly property color tintColor: token("tint-source", "theme").toLowerCase() === "type" ? accentColor : Color.accent
+  readonly property color cardBase: Qt.tint(Color.lock.background,
+    Qt.rgba(tintColor.r, tintColor.g, tintColor.b, cardTint))
+  readonly property color cardColor: Qt.rgba(cardBase.r, cardBase.g, cardBase.b, cardAlpha)
+  // Halo of the same color bled out behind the card. Ties the card to the
+  // wallpaper without a hard edge.
+  readonly property real cardGlow: Math.max(0, Math.min(1, numberToken("card-glow", 0.0)))
+
+  // The wash over the wallpaper. Defaults to the theme's own background rather
+  // than black, which is what keeps light themes from looking bruised.
+  readonly property color scrimColor: colorToken("scrim-color", Color.background)
+
   // ---------------------------------------------------------------- Pokémon
 
   readonly property bool showPokemon: flagToken("pokemon", true)
@@ -465,7 +488,7 @@ Item {
     Rectangle {
       anchors.fill: parent
       visible: root.scrimAlpha > 0
-      color: Qt.rgba(0, 0, 0, root.scrimAlpha)
+      color: Qt.rgba(root.scrimColor.r, root.scrimColor.g, root.scrimColor.b, root.scrimAlpha)
     }
 
     MouseArea {
@@ -479,18 +502,56 @@ Item {
     // wallpaper. Drawn as a sibling behind the card so the card itself never
     // has to become a layer.
     Rectangle {
-      visible: root.cardHasShadow
-      width: card.width
-      height: card.height
-      x: card.x
-      y: card.y + 10
-      radius: card.radius
-      color: Qt.rgba(0, 0, 0, 0.55)
+      visible: root.cardHasShadow || root.cardGlow > 0
+      width: card.width + (root.cardGlow > 0 ? 40 : 0)
+      height: card.height + (root.cardGlow > 0 ? 40 : 0)
+      x: card.x - (root.cardGlow > 0 ? 20 : 0)
+      y: card.y + (root.cardGlow > 0 ? -20 : 10)
+      radius: card.radius + (root.cardGlow > 0 ? 20 : 0)
+      color: root.cardGlow > 0
+        ? Qt.rgba(root.tintColor.r, root.tintColor.g, root.tintColor.b, root.cardGlow * 0.5)
+        : Qt.rgba(0, 0, 0, 0.55)
       layer.enabled: visible
       layer.effect: MultiEffect {
         blurEnabled: true
         blur: 1.0
         blurMax: 48
+      }
+    }
+
+    // Clock outside the card: it stops being one more row in a stack and
+    // becomes the thing you read from across the room. `clock-above` keeps it
+    // tied to the card; `hero` moves it up into the empty top half.
+    Column {
+      id: outsideClock
+      visible: !root.clockInCard && (root.showClock || root.showDate)
+      spacing: 2
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: root.layoutMode === "clock-above" ? card.top : undefined
+      anchors.bottomMargin: 40
+      anchors.verticalCenter: root.layoutMode === "hero" ? parent.verticalCenter : undefined
+      anchors.verticalCenterOffset: -Math.round(root.height * 0.24)
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        visible: root.showClock
+        text: root.clockText
+        color: root.clockColor
+        font.family: Style.font.family
+        // The hero clock is the page's headline, so it gets a size the in-card
+        // clock can't take without pushing everything else around.
+        font.pixelSize: root.layoutMode === "hero" ? Math.round(root.clockFontSize * 1.9) : Math.round(root.clockFontSize * 1.3)
+        font.weight: Font.Light
+        font.letterSpacing: -3
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        visible: root.showDate
+        text: root.dateText
+        color: root.dateColor
+        font.family: Style.font.family
+        font.pixelSize: Math.round(root.dateFontSize * 1.15)
       }
     }
 
@@ -500,7 +561,9 @@ Item {
       height: cardContent.implicitHeight + root.cardPadding * 2
       anchors.centerIn: parent
       anchors.horizontalCenterOffset: shakeOffset
-      color: Qt.rgba(Color.lock.background.r, Color.lock.background.g, Color.lock.background.b, root.cardAlpha)
+      // `hero` drops the card below centre to leave the clock the top half.
+      anchors.verticalCenterOffset: root.layoutMode === "hero" ? Math.round(root.height * 0.12) : 0
+      color: root.cardColor
       borderSpec: root.cardBorderSpec
       radius: Style.cornerRadius > 0 ? Style.cornerRadius + 4 : 0
       clip: true
@@ -674,7 +737,7 @@ Item {
             spacing: 4
 
             Text {
-              visible: root.showClock
+              visible: root.showClock && root.clockInCard
               text: root.clockText
               color: root.clockColor
               font.family: Style.font.family
@@ -684,7 +747,7 @@ Item {
             }
 
             Text {
-              visible: root.showDate
+              visible: root.showDate && root.clockInCard
               text: root.dateText
               color: root.dateColor
               font.family: Style.font.family

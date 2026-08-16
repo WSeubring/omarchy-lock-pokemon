@@ -27,6 +27,10 @@ the right, password field across the bottom, status in the footer.
 - **Status footer**: battery, uptime, keyboard layout. Each entry disappears when
   its source has nothing to say.
 - **Wrong-password shake** of the whole card.
+- **Follows the active Omarchy theme.** The card fill is the theme background
+  mixed toward the theme accent, the wash over the wallpaper is theme-colored
+  rather than black, and the text comes from the theme's own `[lock]` tokens —
+  so a theme switch restyles the lock screen with no per-theme configuration.
 
 ![dual type](docs/lock-dual-type.png)
 
@@ -90,6 +94,11 @@ right under a theme that says nothing about the lock screen.
 | `pokemon-types` | `show` | Type colors on clock, glow and borders |
 | `pokemon-effects` | `show` | Ambient motion, sprite bob, border flicker |
 | `effect-intensity` | `1.0` | Scales the number of ambient shapes (`0` = none) |
+| `layout` | `card` | Where the clock sits: `card`, `clock-above`, `hero` |
+| `card-tint` | `0.12` | How much of the active theme's accent is mixed into the card fill |
+| `tint-source` | `theme` | `theme` uses the Omarchy accent, `type` uses the Pokémon's |
+| `card-glow` | `0` | Halo of the tint color bled out behind the card |
+| `scrim-color` | theme background | The wash over the wallpaper; theme-colored so light themes stay bright |
 | `border-emphasis` | `card-quiet` | How the card ranks against the field: `even`, `card-quiet`, `soft-card`, `split`, `state` |
 | `card-width` | `min(720, 55%)` | px |
 | `card-padding`, `card-alpha` | `30`, `0.82` | Card inset and opacity |
