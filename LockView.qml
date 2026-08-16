@@ -207,10 +207,20 @@ Item {
 
   property string pokemonLabel: ""
   property string pokemonArt: ""
-  property var pokemonTypes: []
+  // The name the sprite came back with, and the table it is looked up in. Kept
+  // as a binding rather than assigned once: types.json loads asynchronously, so
+  // a sprite that arrives first would otherwise stay typeless forever.
+  property string pokemonKey: ""
   property var typeTable: ({})
+  readonly property var pokemonTypes: typeTable[pokemonKey] || []
 
   readonly property color themeAccent: firstColor(Border.resolveValueRef(token("border", "hyprland.active-border")), Color.lock.borderActive)
+  // Everything the Pokémon colours waits for the Pokémon. The sprite process
+  // answers a beat after the card is up, and the clock changing colour under
+  // you was the most visible tell; the pieces that depend on the type fade in
+  // together once it is known, already correct.
+  readonly property bool typeChromeReady: !showPokemon || pokemonArt.length > 0
+
   readonly property color accentColor: typeAccents && pokemonTypes.length > 0
     ? Types.color(pokemonTypes[0], themeAccent)
     : themeAccent
@@ -380,7 +390,7 @@ Item {
   // A new sprite per lock, not per minute — it should feel like a greeting,
   // not a slideshow.
   function drawPokemon() {
-    if (!showPokemon) { pokemonLabel = ""; pokemonArt = ""; pokemonTypes = []; return }
+    if (!showPokemon) { pokemonLabel = ""; pokemonArt = ""; pokemonKey = ""; return }
     shinyLanded = false
     if (shinyMode === "auto") shinyRoll = Math.random() < 1 / shinyOdds
     if (!pokemonProc.running) pokemonProc.running = true
@@ -430,6 +440,7 @@ Item {
     path: String(Qt.resolvedUrl("types.json")).replace(/^file:\/\//, "")
     watchChanges: false
     printErrors: false
+    blockLoading: true
     onLoaded: {
       try { root.typeTable = JSON.parse(text()) } catch (error) { root.typeTable = ({}) }
     }
@@ -473,7 +484,7 @@ Item {
     stdout: StdioCollector {
       onStreamFinished: {
         var lines = String(text).split("\n")
-        if (lines.length < 2) { root.pokemonLabel = ""; root.pokemonArt = ""; root.pokemonTypes = []; return }
+        if (lines.length < 2) { root.pokemonLabel = ""; root.pokemonArt = ""; root.pokemonKey = ""; return }
         // The title line carries a suffix for alternate art — "charizard
         // (shiny)" — which is not a key in types.json, so strip it before the
         // lookup and mark it with a star instead.
@@ -484,7 +495,7 @@ Item {
         root.pokemonLabel = name.length > 0
           ? name.charAt(0).toUpperCase() + name.slice(1) + (alternate ? " ✦" : "")
           : ""
-        root.pokemonTypes = root.typeTable[name.toLowerCase()] || []
+        root.pokemonKey = name.toLowerCase()
         root.pokemonArt = Ansi.toRichText(lines.join("\n"), root.pokemonFontSize)
       }
     }
@@ -609,7 +620,8 @@ Item {
       anchors.bottomMargin: -Math.round(height * 0.34)
       text: root.clockText
       color: root.tintColor
-      opacity: Math.max(0, Math.min(1, root.numberToken("ghost-opacity", 0.2)))
+      opacity: root.typeChromeReady ? Math.max(0, Math.min(1, root.numberToken("ghost-opacity", 0.2))) : 0
+      Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
       font.family: Style.font.family
       font.pixelSize: Math.round(root.clockFontSize * root.numberToken("ghost-scale", 3.4))
       font.weight: Font.Light
@@ -647,6 +659,8 @@ Item {
         visible: root.showClock
         text: root.clockText
         color: root.clockColor
+        opacity: root.typeChromeReady ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
         font.family: Style.font.family
         // The hero clock is the page's headline, so it gets a size the in-card
         // clock can't take without pushing everything else around.
@@ -822,6 +836,7 @@ Item {
                 // as light coming off it rather than a shape of its own.
                 Rectangle {
                   id: spriteGlow
+                  visible: root.typeChromeReady
                   anchors.centerIn: sprite
                   width: Math.max(sprite.width * sprite.scale, 120) * (root.shinyLanded ? 1.05 : 0.9)
                   height: width
@@ -977,6 +992,8 @@ Item {
               visible: root.showClock && root.clockInCard
               text: root.clockText
               color: root.clockColor
+              opacity: root.typeChromeReady ? 1 : 0
+              Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
               font.family: Style.font.family
               font.pixelSize: root.clockFontSize
               font.weight: Font.Light
