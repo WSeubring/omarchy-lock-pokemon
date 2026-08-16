@@ -25,7 +25,6 @@
 //   spin      degrees of rotation over the cycle
 
 var BASE = {
-  // still-ish types get something, but something you have to look for
   motes:    { count: 10, size: 3,  duration: 14000, opacity: 0.22, motion: "drift",  shape: "dot",  spread: 80,  spin: 0 },
   embers:   { count: 12, size: 3,  duration: 5000,  opacity: 0.75, motion: "rise",   shape: "dot",  spread: 90,  spin: 0 },
   bubbles:  { count: 12, size: 9,  duration: 9000,  opacity: 0.35, motion: "rise",   shape: "ring", spread: 90,  spin: 0 },
@@ -46,6 +45,7 @@ var BASE = {
   plates:   { count: 8,  size: 26, duration: 5200,  opacity: 0.18, motion: "hold",   shape: "chip", spread: 0,   spin: 0 },
   twinkles: { count: 12, size: 3,  duration: 1600,  opacity: 0.85, motion: "hold",   shape: "dot",  spread: 0,   spin: 0 },
 
+  // Electric's default. `sparks` above is its quieter alternate.
   strikes:  { count: 3,  size: 130,duration: 3000,  opacity: 0.9,  motion: "strike", shape: "bolt", spread: 0,   spin: 0 }
 }
 
@@ -76,6 +76,3 @@ function config(kind, variant) {
   }
 }
 
-function variantNames() {
-  return VARIANTS.map(entry => entry.name)
-}

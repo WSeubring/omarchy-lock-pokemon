@@ -217,7 +217,6 @@ Item {
   readonly property string typeGradient: typeAccents && pokemonTypes.length > 0
     ? Types.gradient(pokemonTypes, "")
     : ""
-  readonly property string typeLabel: Types.label(pokemonTypes)
   // `effect-<type>` swaps the behaviour a type uses, e.g.
   // `effect-electric = "strikes"` for lightning bolts instead of sparks.
   function effectFor(typeName, fallback) {

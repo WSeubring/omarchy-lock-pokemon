@@ -1,109 +1,36 @@
 # Pokémon Lock Screen
 
-A lock screen for [Omarchy](https://omarchy.org/) 4's Quickshell shell. A random
-Pokémon greets you, its types colour the card and stir the air behind it, and
-your battery is its HP.
+A lock screen plugin for [Omarchy](https://omarchy.org/) 4's Quickshell shell.
+A Pokémon greets you, its types colour the card and stir the air behind it, and
+your battery reads as its HP.
 
-![lock screen](docs/lock.jpg)
+![The lock screen](docs/lock.jpg)
 
-It is a clone of the stock `omarchy.lock` plugin, so the session lock, the PAM
-flows and the fingerprint handling are upstream code, carried verbatim and
-untouched. Everything visible is rewritten.
+It is a clone of the stock `omarchy.lock` plugin. Everything visible is
+rewritten; `Service.qml` — the session lock, the PAM flows and the fingerprint
+handling — is upstream code carried verbatim.
 
----
+## Features
 
-## What it does
+- **A different Pokémon each lock**, drawn from `pokemon-colorscripts` ANSI art.
+- **Types drive the card.** The primary type colours the clock, the sprite glow
+  and the borders. Dual types make the borders a two-stop gradient.
+- **Eighteen types, eighteen ambient effects.** No two share one.
+- **Battery as an HP bar**, in the games' green / yellow / red. Optional.
+- **Shiny rolls**, one in 128 by default, announced with a sparkle burst.
+- **Follows the active Omarchy theme** — card fill, wash and text all resolve
+  from the theme, light themes included. No per-theme configuration.
+- **Everything is a token** in `[lock]`, themeable and overridable per machine.
 
-**A Pokémon per lock.** Sprites come from
-[`pokemon-colorscripts`](https://gitlab.com/phoneybadger/pokemon-colorscripts);
-its ANSI half-block art is parsed into rich text at runtime. No binary
-installed means no sprite and no error.
+## Requirements
 
-**Shinies happen.** Every lock rolls for one at `shiny-odds`, which defaults to
-**1 in 128** — rare enough to mean something, common enough to actually see.
-Set it to `4096` for the modern games' rate, `8192` for the original, or force
-the issue with `pokemon-shiny = "always"`.
+- Omarchy 4 (Quickshell shell)
+- `pokemon-colorscripts` for the sprites — without it the card simply renders
+  without one
 
-![shiny Charizard](docs/shiny.gif)
-
-When one lands it announces itself: eight stars burst out of the sprite, the
-glow behind it turns gold and keeps breathing, the name takes a ✦ and a SHINY
-tag appears under the types.
-
-**Its types drive the card.** The primary type colours the clock, the glow
-behind the sprite and the borders; a dual type turns the borders into a
-two-stop gradient and prints each type name in its own colour.
-
-**Eighteen types, eighteen behaviours.** No two types share an effect.
-
-| | | |
-|---|---|---|
-| ![electric](docs/effects/electric.gif) | ![ice](docs/effects/ice.gif) | ![psychic](docs/effects/psychic.gif) |
-| **electric** — lightning strikes | **ice** — drifting flakes | **psychic** — expanding ripples |
-| ![rock](docs/effects/rock.gif) | ![dragon](docs/effects/dragon.gif) | ![poison](docs/effects/poison.gif) |
-| **rock** — orbiting rubble | **dragon** — inward vortex | **poison** — creeping smog |
-
-The other twelve: embers (fire), bubbles (water), leaves (grass), wisps (ghost),
-twinkles (fairy), grit (ground), gusts (flying), shockwave rings (fighting),
-flit (bug), dark pools, steel plates and dust motes (normal).
-
-Dual types layer the second type's weather behind the first at 55% density:
-
-| | |
-|---|---|
-| ![gengar](docs/effects/dual-gengar.gif) | ![venusaur](docs/effects/dual-venusaur.gif) |
-| **Gengar** — ghost wisps over poison smog | **Venusaur** — leaves falling through smog |
-
-Three types also carry a trait on top of, or instead of, their weather: flying
-hovers the sprite, electric flicks the card edge, ground rumbles the whole card.
-
-**Battery as HP** — optional, on by default.
-
-![hp bar](docs/hp-bar.jpg)
-
-Green above 50%, yellow to 20%, red below, exactly as the games do it, so it
-needs no legend. Plugged in, the label becomes `⚡HP` and a highlight sweeps the
-fill. `battery-style = "text"` puts a plain percentage in the status strip
-instead, `"hide"` drops it entirely, and `hp-colors = "theme"` swaps the game
-palette for the theme accent.
-
----
-
-## It follows your Omarchy theme
-
-The card fill is the active theme's background mixed toward its accent, the wash
-over the wallpaper is theme-coloured rather than black, and every piece of text
-comes from the theme's own `[lock]` tokens. Switching themes restyles the lock
-screen with no per-theme configuration.
-
-| | |
-|---|---|
-| ![Tokyo Night](docs/themes/tokyo-night.jpg) | ![Rosé Pine](docs/themes/rose-pine.jpg) |
-| Tokyo Night | Rosé Pine |
-| ![Everforest](docs/themes/everforest.jpg) | ![Catppuccin Latte](docs/themes/catppuccin-latte.jpg) |
-| Everforest | Catppuccin Latte |
-
-Latte is the one that matters: a hard-coded black scrim bruises a light theme, a
-theme-coloured one keeps it bright.
-
----
-
-## Where the clock goes
-
-`layout` picks the placement. The card always keeps the date, the greeting, the
-sprite, the HP bar and the field, so it stays substantial wherever the time
-lands.
-
-| | |
-|---|---|
-| ![card](docs/layout/card.jpg) | ![ghost](docs/layout/ghost.jpg) |
-| `card` — beside the sprite | `ghost` — a theme-coloured watermark behind the card |
-| ![corner](docs/layout/corner.jpg) | ![clock-above](docs/layout/clock-above.jpg) |
-| `corner` — small and muted, top right | `clock-above` — on the wallpaper above the card |
-
-A fifth, `hero`, anchors the clock high on the screen at nearly twice the size.
-
----
+```bash
+yay -S pokemon-colorscripts-git
+```
 
 ## Install
 
@@ -113,139 +40,178 @@ omarchy plugin disable omarchy.lock
 omarchy restart shell
 ```
 
-The plugin id is `wseubring.lock`; rename the directory *and* the `id` in
-`manifest.json` together if you want your own namespace.
+The plugin id is `wseubring.lock`. To use your own namespace, rename the
+directory and the `id` in `manifest.json` together.
 
-Sprites need `pokemon-colorscripts`:
-
-```bash
-yay -S pokemon-colorscripts-git
-```
-
-Preview it without locking yourself out:
+Preview it without locking the session:
 
 ```bash
 qs -p /usr/share/omarchy/shell ipc call lock preview
 qs -p /usr/share/omarchy/shell ipc call lock hidePreview
 ```
 
-Plugin edits need `omarchy restart shell` to take effect — and never restart the
-shell while the session is locked, or the lock client dies and Hyprland drops to
-its failsafe screen.
+Plugin changes need `omarchy restart shell`. Never restart the shell while the
+session is locked — the lock client dies and Hyprland falls back to its
+recovery screen.
 
----
+## Gallery
+
+Ambient effects, one per type:
+
+| electric | ice | psychic |
+|---|---|---|
+| ![electric](docs/effects/electric.gif) | ![ice](docs/effects/ice.gif) | ![psychic](docs/effects/psychic.gif) |
+| lightning strikes | drifting flakes | expanding ripples |
+
+| rock | dragon | poison |
+|---|---|---|
+| ![rock](docs/effects/rock.gif) | ![dragon](docs/effects/dragon.gif) | ![poison](docs/effects/poison.gif) |
+| orbiting rubble | inward vortex | creeping smog |
+
+The rest: embers (fire), bubbles (water), leaves (grass), wisps (ghost),
+twinkles (fairy), grit (ground), gusts (flying), shockwave rings (fighting),
+flit (bug), pools (dark), plates (steel), motes (normal). Flying also hovers
+the sprite, electric flicks the card edge, ground rumbles the card.
+
+Dual types layer the second type's effect behind the first:
+
+| Gengar · ghost over poison | Venusaur · grass over poison |
+|---|---|
+| ![Gengar](docs/effects/dual-gengar.gif) | ![Venusaur](docs/effects/dual-venusaur.gif) |
+
+A shiny, and the battery gauge:
+
+| ![Shiny Charizard](docs/shiny.gif) | ![HP bar](docs/hp-bar.jpg) |
+|---|---|
+
+The same card under four Omarchy themes:
+
+| Tokyo Night | Rosé Pine |
+|---|---|
+| ![Tokyo Night](docs/themes/tokyo-night.jpg) | ![Rosé Pine](docs/themes/rose-pine.jpg) |
+
+| Everforest | Catppuccin Latte |
+|---|---|
+| ![Everforest](docs/themes/everforest.jpg) | ![Catppuccin Latte](docs/themes/catppuccin-latte.jpg) |
+
+Clock placements — `card`, `ghost`, `corner`, `clock-above`, and `hero`:
+
+| ![card](docs/layout/card.jpg) | ![ghost](docs/layout/ghost.jpg) |
+|---|---|
+| ![corner](docs/layout/corner.jpg) | ![clock-above](docs/layout/clock-above.jpg) |
 
 ## Configuration
 
-Everything reads `[lock]` in shell.toml, which the shell assembles from the
-current theme's generated file with `~/.config/omarchy/shell.toml` merged on
-top. A theme owns the look; the machine-level file overrides any single key:
+All settings live in the `[lock]` section of shell.toml. The shell merges the
+current theme's generated file with `~/.config/omarchy/shell.toml` on top:
 
-- theme-scoped: `~/.config/omarchy/themes/<slug>/shell.lock.toml`
-  (a full-section override — it replaces the whole `[lock]` block, so repeat
-  every key you want to keep)
-- machine-wide: `~/.config/omarchy/shell.toml` under `[lock]`
+- **Per theme** — `~/.config/omarchy/themes/<slug>/shell.lock.toml`. This
+  replaces the whole `[lock]` block, so repeat every key you want to keep.
+- **Per machine** — `[lock]` in `~/.config/omarchy/shell.toml`, which wins over
+  the theme for the keys it names.
 
-Unset keys fall back to palette-derived defaults, so this looks right under a
-theme that says nothing about the lock screen.
-
-### Layout
-
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `layout` | `card` | `card`, `clock-above`, `hero`, `ghost`, `corner` |
-| `card-width` | `min(720, 55%)` | px |
-| `card-padding`, `card-alpha` | `30`, `0.82` | Card inset and opacity |
-| `card-tint` | `0.14` | How much theme accent is mixed into the card fill |
-| `tint-source` | `theme` | `theme` uses the Omarchy accent, `type` the Pokémon's |
-| `card-glow` | `0.25` | Halo of the tint colour behind the card |
-| `border-emphasis` | `card-quiet` | `even`, `card-quiet`, `soft-card`, `split`, `state` |
-| `field-height` | `60` | Password field height (it spans the card) |
-| `blur` | `1.0` | `0` leaves the wallpaper sharp |
-| `scrim-color`, `scrim-alpha` | theme background, `0.5` | The wash over the wallpaper |
-
-### Text
-
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `clock`, `date`, `greeting`, `status` | `show` | Section toggles |
-| `clock-format`, `date-format` | `HH:mm`, `dddd d MMMM` | Qt date formats |
-| `clock-size`, `date-size`, `greeting-size`, `status-size` | from the `[font]` scale | px |
-| `clock-color` | type accent | `date-color`, `greeting-color`, `status-color` follow the theme |
-| `user-name` | GECOS, else login name | Name in the greeting |
-| `greeting-text` | time of day | Literal line; `{name}` and `{pokemon}` are substituted |
-| `ghost-opacity`, `ghost-scale` | `0.2`, `3.4` | Watermark clock in `ghost` layout |
-
-### Pokémon and effects
-
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `pokemon`, `pokemon-label` | `show` | Sprite, and its name/type line |
-| `pokemon-name` | random | Pin one (`pikachu`) |
-| `pokemon-generations` | all | `pokemon-colorscripts` range syntax, e.g. `1-3` |
-| `pokemon-shiny` | `auto` | `auto` rolls the odds, `always`, or `false` |
-| `shiny-odds` | `128` | One in this many locks is shiny |
-| `shiny-color` | `#ffd452` | Sparkle, glow and tag colour |
-| `pokemon-size`, `pokemon-height` | `12`, `170` | Glyph px, and px the sprite is scaled to |
-| `pokemon-types` | `show` | Type colours on clock, glow and borders |
-| `pokemon-effects` | `show` | Ambient motion and traits |
-| `effect-intensity` | `1.0` | Scales shape counts (`0` = none) |
-| `effect-variant` | `1` | `1` calm, `2` busy, `3` bold; per effect with `effect-variant-<name>` |
-| `effect-<type>` | per type | Point a type at another effect, e.g. `effect-electric = "sparks"` |
-| `dual-effects` | `show` | Layer the second type's effect behind the first |
-| `dual-effect-strength` | `0.55` | Density of that second layer |
-
-### Battery
-
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `battery-style` | `hp-bar` | `hp-bar`, `text` (in the status strip), or `hide` |
-| `hp-colors` | `hp` | `hp` for the games' green/yellow/red, `theme` for the accent |
-| `status-items` | *(empty)* | Extra strip entries: `uptime`, `keyboard` |
-| `status-gap` | `22` | px |
-
-Stock `[lock]` colour keys (`background`, `text`, `placeholder`, `text-error`,
-`border`, `border-active`, `border-error`, `border-alpha`, `selection`) keep
-working exactly as they do on the built-in lock screen.
-
-### Example
+Unset keys fall back to palette-derived defaults, so the plugin looks right
+under a theme that says nothing about the lock screen.
 
 ```toml
 [lock]
 layout = "ghost"
 greeting-text = "{pokemon} welcomes you back, {name}"
 pokemon-generations = "1-3"
-effect-electric = "sparks"
+shiny-odds = 4096
 battery-style = "hide"
-card-tint = 0.2
 ```
 
----
+### Layout
 
-## How it is put together
+| Key | Default | Description |
+| --- | --- | --- |
+| `layout` | `card` | `card`, `clock-above`, `hero`, `ghost`, `corner` |
+| `card-width` | `min(720, 55%)` | Card width in px |
+| `card-padding` · `card-alpha` | `30` · `0.82` | Inset and opacity |
+| `card-tint` | `0.14` | Theme accent mixed into the card fill |
+| `tint-source` | `theme` | `theme` accent, or the Pokémon's with `type` |
+| `card-glow` | `0.25` | Halo of the tint colour behind the card |
+| `border-emphasis` | `card-quiet` | `even`, `card-quiet`, `soft-card`, `split`, `state` |
+| `field-height` | `60` | Password field height |
+| `blur` | `1.0` | Wallpaper blur; `0` leaves it sharp |
+| `scrim-color` · `scrim-alpha` | theme background · `0.5` | Wash over the wallpaper |
 
-| File | What it holds |
+### Text
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `clock` · `date` · `greeting` · `status` | `show` | Section toggles |
+| `clock-format` · `date-format` | `HH:mm` · `dddd d MMMM` | Qt date formats |
+| `clock-size` · `date-size` · `greeting-size` · `status-size` | from `[font]` | px |
+| `clock-color` | type accent | `date-color`, `greeting-color`, `status-color` follow the theme |
+| `user-name` | GECOS, else login | Name used in the greeting |
+| `greeting-text` | time of day | Supports `{name}` and `{pokemon}` |
+| `ghost-opacity` · `ghost-scale` | `0.2` · `3.4` | Watermark clock in `ghost` layout |
+
+### Pokémon
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `pokemon` · `pokemon-label` | `show` | Sprite, and its name and type line |
+| `pokemon-name` | random | Pin one, e.g. `pikachu` |
+| `pokemon-generations` | all | `pokemon-colorscripts` range, e.g. `1-3` |
+| `pokemon-size` · `pokemon-height` | `12` · `170` | Glyph px, and px the sprite fits into |
+| `pokemon-shiny` | `auto` | `auto` rolls the odds, or `always` / `false` |
+| `shiny-odds` | `128` | One lock in this many is shiny |
+| `shiny-color` | `#ffd452` | Sparkle, glow and tag colour |
+
+### Effects
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `pokemon-types` | `show` | Type colours on clock, glow and borders |
+| `pokemon-effects` | `show` | Ambient motion and per-type traits |
+| `effect-intensity` | `1.0` | Scales shape counts; `0` disables |
+| `effect-variant` | `1` | `1` calm, `2` busy, `3` bold |
+| `effect-variant-<name>` | — | Same, for a single effect |
+| `effect-<type>` | per type | Reassign a type, e.g. `effect-electric = "sparks"` |
+| `dual-effects` | `show` | Layer the second type's effect behind the first |
+| `dual-effect-strength` | `0.55` | Density of that second layer |
+
+### Battery
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `battery-style` | `hp-bar` | `hp-bar`, `text`, or `hide` |
+| `hp-colors` | `hp` | Games' palette, or `theme` for the accent |
+| `status-items` | *(empty)* | Extra strip entries: `uptime`, `keyboard` |
+| `status-gap` | `22` | Spacing in px |
+
+The stock `[lock]` colour keys (`background`, `text`, `placeholder`,
+`text-error`, `border`, `border-active`, `border-error`, `border-alpha`,
+`selection`) behave exactly as on the built-in lock screen.
+
+## Architecture
+
+| File | Contents |
 | --- | --- |
-| `Service.qml` | Upstream Omarchy code: session lock, PAM, fingerprint, idle |
-| `LockView.qml` | The card, its layout, and every `[lock]` token |
-| `Ambient.qml` | Ten motions — rise, fall, drift, settle, streak, zigzag, expand, orbit, spiral, strike |
-| `Effects.js` | Tuning for all eighteen effects, plus the calm/busy/bold multipliers |
-| `Types.js` | Type → colour, effect and traits |
-| `Ansi.js` | ANSI half-block art → QML rich text |
-| `HpBar.qml` | The battery gauge |
-| `types.json` | Every name `pokemon-colorscripts` knows → its types, from PokéAPI |
+| `Service.qml` | Upstream Omarchy: session lock, PAM, fingerprint, idle |
+| `LockView.qml` | Card layout and every `[lock]` token |
+| `Ambient.qml` | The nine motions the effects are built from |
+| `Effects.js` | Tuning for all eighteen effects, plus intensity variants |
+| `Types.js` | Type to colour, effect and trait |
+| `Ansi.js` | ANSI half-block art to QML rich text |
+| `HpBar.qml` · `ShinySparkle.qml` | Battery gauge and shiny burst |
+| `types.json` | `pokemon-colorscripts` names to types, from PokéAPI |
 
-Motion is hand-rolled QtQuick animation rather than `QtQuick.Particles`: a lock
-screen wants a dozen slow shapes, not a particle system, and this keeps the
-plugin to plain QtQuick imports.
+Motion is hand-written QtQuick animation rather than `QtQuick.Particles`: a
+lock screen needs a dozen slow shapes, not a particle system, and this keeps
+the plugin on plain QtQuick imports.
 
-### Keeping up with upstream
-
-`Service.qml` is carried verbatim. When Omarchy updates its lock plugin:
+When Omarchy updates its lock plugin, reconcile the upstream half:
 
 ```bash
 diff -u /usr/share/omarchy/shell/plugins/lock/Service.qml Service.qml
 ```
 
-`types.json` is generated from PokéAPI's eighteen type endpoints, folded into
-`{name: [type, ...]}`; regenerate it when a new generation lands.
+## Credits
+
+Sprites from [pokemon-colorscripts](https://gitlab.com/phoneybadger/pokemon-colorscripts).
+Type data from [PokéAPI](https://pokeapi.co/). Lock plumbing from
+[Omarchy](https://omarchy.org/). MIT licensed — see [LICENSE](LICENSE).

@@ -78,7 +78,3 @@ function gradient(types, fallback) {
   return stops.join(" ") + " 45deg"
 }
 
-function label(types) {
-  if (!types || types.length === 0) return ""
-  return types.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join(" / ")
-}
