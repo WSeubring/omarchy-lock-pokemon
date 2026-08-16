@@ -56,10 +56,14 @@ Item {
       color: Qt.rgba(root.trackColor.r, root.trackColor.g, root.trackColor.b, 0.25)
 
       Rectangle {
+        id: fill
         width: Math.max(parent.height, parent.width * root.clamped)
         height: parent.height
         radius: parent.radius
         color: root.fillColor
+        // Keeps the charging highlight inside the filled part instead of
+        // travelling on across the label and the percentage.
+        clip: true
 
         Behavior on width {
           NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
@@ -83,7 +87,7 @@ Item {
           SequentialAnimation {
             running: sweep.visible
             loops: Animation.Infinite
-            NumberAnimation { target: sweep; property: "x"; from: -sweep.width; to: track.width; duration: 1800; easing.type: Easing.InOutSine }
+            NumberAnimation { target: sweep; property: "x"; from: -sweep.width; to: fill.width; duration: 1800; easing.type: Easing.InOutSine }
             PauseAnimation { duration: 900 }
           }
         }
