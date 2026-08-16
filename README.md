@@ -19,10 +19,16 @@ untouched. Everything visible is rewritten.
 its ANSI half-block art is parsed into rich text at runtime. No binary
 installed means no sprite and no error.
 
-**Shinies too.** `pokemon-shiny = true` swaps in the alternate palette, and the
-name picks up a ✦.
+**Shinies happen.** Every lock rolls for one at `shiny-odds`, which defaults to
+**1 in 128** — rare enough to mean something, common enough to actually see.
+Set it to `4096` for the modern games' rate, `8192` for the original, or force
+the issue with `pokemon-shiny = "always"`.
 
-![shiny Charizard](docs/shiny.jpg)
+![shiny Charizard](docs/shiny.gif)
+
+When one lands it announces itself: eight stars burst out of the sprite, the
+glow behind it turns gold and keeps breathing, the name takes a ✦ and a SHINY
+tag appears under the types.
 
 **Its types drive the card.** The primary type colours the clock, the glow
 behind the sprite and the borders; a dual type turns the borders into a
@@ -177,7 +183,9 @@ theme that says nothing about the lock screen.
 | `pokemon`, `pokemon-label` | `show` | Sprite, and its name/type line |
 | `pokemon-name` | random | Pin one (`pikachu`) |
 | `pokemon-generations` | all | `pokemon-colorscripts` range syntax, e.g. `1-3` |
-| `pokemon-shiny` | `false` | Shiny sprites |
+| `pokemon-shiny` | `auto` | `auto` rolls the odds, `always`, or `false` |
+| `shiny-odds` | `128` | One in this many locks is shiny |
+| `shiny-color` | `#ffd452` | Sparkle, glow and tag colour |
 | `pokemon-size`, `pokemon-height` | `12`, `170` | Glyph px, and px the sprite is scaled to |
 | `pokemon-types` | `show` | Type colours on clock, glow and borders |
 | `pokemon-effects` | `show` | Ambient motion and traits |

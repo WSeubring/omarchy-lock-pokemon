@@ -168,7 +168,20 @@ Item {
 
   readonly property bool showPokemon: flagToken("pokemon", true)
   readonly property bool showPokemonLabel: flagToken("pokemon-label", true)
-  readonly property bool pokemonShiny: flagToken("pokemon-shiny", false)
+  // `pokemon-shiny`: "auto" rolls the odds below on every lock, true always
+  // shines, false never does. `shiny-odds = 128` is one in a hundred and
+  // twenty-eight — rare enough to feel like something, often enough to
+  // actually happen. 4096 is the modern games' rate, 8192 the original.
+  readonly property string shinyMode: token("pokemon-shiny", "auto").toLowerCase()
+  readonly property int shinyOdds: Math.max(1, Math.round(numberToken("shiny-odds", 128)))
+  property bool shinyRoll: false
+  readonly property bool pokemonShiny: shinyMode === "auto"
+    ? shinyRoll
+    : ["1", "true", "yes", "on", "show", "always"].indexOf(shinyMode) >= 0
+  // True only once the sprite that came back is actually the shiny one, so the
+  // sparkle never fires on a normal Pokémon.
+  property bool shinyLanded: false
+  readonly property color shinyTint: colorToken("shiny-color", "#ffd452")
   readonly property int pokemonFontSize: Math.round(numberToken("pokemon-size", 12))
   readonly property int pokemonHeight: Math.round(numberToken("pokemon-height", 170))
   readonly property string pokemonName: token("pokemon-name", "")
@@ -369,6 +382,8 @@ Item {
   // not a slideshow.
   function drawPokemon() {
     if (!showPokemon) { pokemonLabel = ""; pokemonArt = ""; pokemonTypes = []; return }
+    shinyLanded = false
+    if (shinyMode === "auto") shinyRoll = Math.random() < 1 / shinyOdds
     if (!pokemonProc.running) pokemonProc.running = true
   }
 
@@ -466,6 +481,7 @@ Item {
         var title = lines.shift().trim()
         var name = title.replace(/\s*\(.*\)\s*$/, "")
         var alternate = name !== title
+        root.shinyLanded = alternate
         root.pokemonLabel = name.length > 0
           ? name.charAt(0).toUpperCase() + name.slice(1) + (alternate ? " ✦" : "")
           : ""
@@ -756,12 +772,21 @@ Item {
                 // Soft type-colored glow, sitting under the sprite so it reads
                 // as light coming off it rather than a shape of its own.
                 Rectangle {
+                  id: spriteGlow
                   anchors.centerIn: sprite
-                  width: Math.max(sprite.width * sprite.scale, 120) * 0.9
+                  width: Math.max(sprite.width * sprite.scale, 120) * (root.shinyLanded ? 1.05 : 0.9)
                   height: width
                   radius: width / 2
-                  color: root.accentColor
-                  opacity: root.typeAccents ? 0.16 : 0.0
+                  color: root.shinyLanded ? root.shinyTint : root.accentColor
+                  opacity: root.typeAccents || root.shinyLanded ? 0.16 : 0.0
+
+                  // A shiny keeps breathing after the sparkle has gone.
+                  SequentialAnimation {
+                    running: root.shinyLanded
+                    loops: Animation.Infinite
+                    NumberAnimation { target: spriteGlow; property: "opacity"; to: 0.34; duration: 1700; easing.type: Easing.InOutSine }
+                    NumberAnimation { target: spriteGlow; property: "opacity"; to: 0.16; duration: 1700; easing.type: Easing.InOutSine }
+                  }
                   layer.enabled: true
                   layer.effect: MultiEffect {
                     blurEnabled: true
@@ -795,8 +820,16 @@ Item {
                     NumberAnimation { target: sprite; property: "bobOffset"; to: 0; duration: 1600; easing.type: Easing.InOutSine }
                   }
                 }
+
+                // The shiny moment, over the sprite it belongs to.
+                ShinySparkle {
+                  anchors.fill: parent
+                  active: root.shinyLanded && root.showPokemon
+                  tint: root.shinyTint
+                }
               }
 
+              // Name, with the shiny star already in the label.
               Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: root.showPokemonLabel && root.pokemonLabel.length > 0
@@ -838,6 +871,29 @@ Item {
                       opacity: 0.95
                     }
                   }
+                }
+              }
+
+              // Earned, not configured: only shown when the roll came in.
+              Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: root.shinyLanded && root.showPokemonLabel
+                spacing: 5
+
+                Text {
+                  text: "✦"
+                  color: root.shinyTint
+                  font.family: Style.font.family
+                  font.pixelSize: root.statusFontSize
+                }
+
+                Text {
+                  text: "SHINY"
+                  color: root.shinyTint
+                  font.family: Style.font.family
+                  font.pixelSize: Math.max(9, root.statusFontSize - 1)
+                  font.bold: true
+                  font.letterSpacing: 1.6
                 }
               }
 
