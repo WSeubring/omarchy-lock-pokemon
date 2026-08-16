@@ -84,7 +84,9 @@ right under a theme that says nothing about the lock screen.
 | `clock-color`, `date-color`, `greeting-color`, `status-color` | `text` / `placeholder` | hex, role name, or a `section.key` reference; a gradient reference uses its first stop |
 | `user-name` | GECOS, else login name | Name used in the greeting |
 | `greeting-text` | time-of-day greeting | Literal line; `{name}` and `{pokemon}` are substituted |
-| `status-items` | `battery uptime keyboard` | Which entries the strip shows |
+| `status-items` | *(empty)* | Extra strip entries: `uptime`, `keyboard` (battery is the HP bar) |
+| `battery-style` | `hp-bar` | `hp-bar`, `text` (in the strip), or `hide` |
+| `hp-colors` | `hp` | `hp` for the games' green/yellow/red, `theme` for the accent |
 | `status-gap`, `status-margin` | `26`, `48` | px |
 | `pokemon-name` | random | Pin a Pokémon (`pikachu`) |
 | `pokemon-generations` | all | `pokemon-colorscripts` range syntax, e.g. `1-3` |
@@ -94,8 +96,9 @@ right under a theme that says nothing about the lock screen.
 | `pokemon-types` | `show` | Type colors on clock, glow and borders |
 | `pokemon-effects` | `show` | Ambient motion, sprite bob, border flicker |
 | `effect-intensity` | `1.0` | Scales the number of ambient shapes (`0` = none) |
-| `layout` | `card` | Where the clock sits: `card`, `clock-above`, `hero` |
-| `card-tint` | `0.12` | How much of the active theme's accent is mixed into the card fill |
+| `layout` | `card` | Where the clock sits: `card`, `clock-above`, `hero`, `ghost`, `corner` |
+| `ghost-opacity`, `ghost-scale` | `0.2`, `3.4` | Watermark clock in `ghost` layout |
+| `card-tint` | `0.14` | How much of the active theme's accent is mixed into the card fill |
 | `tint-source` | `theme` | `theme` uses the Omarchy accent, `type` uses the Pokémon's |
 | `card-glow` | `0` | Halo of the tint color bled out behind the card |
 | `scrim-color` | theme background | The wash over the wallpaper; theme-colored so light themes stay bright |

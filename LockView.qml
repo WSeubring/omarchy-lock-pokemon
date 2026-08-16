@@ -98,7 +98,10 @@ Item {
   readonly property bool showStatus: flagToken("status", true)
   // Space-separated list, so a theme can drop or reorder the strip's entries:
   // `status-items = "battery keyboard"`.
-  readonly property string statusItems: token("status-items", "battery uptime keyboard")
+  // Empty by default: the battery lives in the HP bar now, and uptime and
+  // keyboard layout were noise on a lock screen. Any of them can be switched
+  // back on: `status-items = "uptime keyboard"`.
+  readonly property string statusItems: token("status-items", "")
 
   function statusEnabled(name) {
     return statusItems.toLowerCase().split(/[\s,]+/).indexOf(name) >= 0
@@ -134,8 +137,13 @@ Item {
   //   card        everything inside one card
   //   clock-above the clock and date sit on the wallpaper above the card
   //   hero        clock anchored high on the screen, compact card below it
+  //   ghost       oversized clock as a watermark behind the card
+  //   corner      small muted clock in the screen's top corner
   readonly property string layoutMode: token("layout", "card").toLowerCase()
   readonly property bool clockInCard: layoutMode === "card"
+  // ghost and corner move only the clock; the date stays in the card so it
+  // still has a headline of its own.
+  readonly property bool dateInCard: layoutMode === "card" || layoutMode === "ghost" || layoutMode === "corner"
 
   // A wash of the theme (or the Pokémon's type) mixed into the card, so the
   // card belongs to the palette instead of being a neutral grey box on top of
@@ -273,6 +281,12 @@ Item {
     if (hours > 0) return hours + "h " + minutes + "m up"
     return minutes + "m up"
   }
+  // `battery-style`: hp-bar (a Pokémon HP gauge under the sprite), text (the
+  // old status-strip entry), or hide. `hp-colors = theme` swaps the classic
+  // green/yellow/red for the theme accent.
+  readonly property string batteryStyle: token("battery-style", "hp-bar").toLowerCase()
+  readonly property bool hpFollowsTheme: token("hp-colors", "hp").toLowerCase() !== "hp"
+
   readonly property var batteryDevice: UPower.displayDevice
   readonly property bool batteryPresent: !!(batteryDevice && batteryDevice.isPresent)
   readonly property bool batteryCharging: batteryPresent && batteryDevice.state === UPowerDeviceState.Charging
@@ -519,12 +533,42 @@ Item {
       }
     }
 
+    // Watermark clock: enormous, in the theme's own color at low opacity, with
+    // the card sitting over it. The time is there when you look for it and
+    // never competes with the field.
+    Text {
+      visible: root.layoutMode === "ghost" && root.showClock
+      anchors.horizontalCenter: parent.horizontalCenter
+      anchors.bottom: card.top
+      anchors.bottomMargin: -Math.round(height * 0.34)
+      text: root.clockText
+      color: root.tintColor
+      opacity: Math.max(0, Math.min(1, root.numberToken("ghost-opacity", 0.2)))
+      font.family: Style.font.family
+      font.pixelSize: Math.round(root.clockFontSize * root.numberToken("ghost-scale", 3.4))
+      font.weight: Font.Light
+      font.letterSpacing: -8
+    }
+
+    // Corner clock: the smallest possible answer, parked where a status bar
+    // would be, so the card keeps the whole middle of the screen.
+    Text {
+      visible: root.layoutMode === "corner" && root.showClock
+      anchors.top: parent.top
+      anchors.right: parent.right
+      anchors.margins: 34
+      text: root.clockText
+      color: root.dateColor
+      font.family: Style.font.family
+      font.pixelSize: Math.round(root.dateFontSize * 1.2)
+    }
+
     // Clock outside the card: it stops being one more row in a stack and
     // becomes the thing you read from across the room. `clock-above` keeps it
     // tied to the card; `hero` moves it up into the empty top half.
     Column {
       id: outsideClock
-      visible: !root.clockInCard && (root.showClock || root.showDate)
+      visible: (root.layoutMode === "clock-above" || root.layoutMode === "hero") && (root.showClock || root.showDate)
       spacing: 2
       anchors.horizontalCenter: parent.horizontalCenter
       anchors.bottom: root.layoutMode === "clock-above" ? card.top : undefined
@@ -547,7 +591,7 @@ Item {
 
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        visible: root.showDate
+        visible: root.showDate && !root.dateInCard
         text: root.dateText
         color: root.dateColor
         font.family: Style.font.family
@@ -728,6 +772,20 @@ Item {
                   }
                 }
               }
+
+              // Battery as the Pokémon's HP. Same number a status strip would
+              // have printed, in the one visual language this card already
+              // speaks.
+              HpBar {
+                width: parent.width
+                visible: root.batteryPresent && root.batteryStyle === "hp-bar"
+                value: root.batteryPresent ? root.batteryDevice.percentage : 0
+                charging: root.batteryCharging
+                tint: root.hpFollowsTheme ? root.accentColor : "transparent"
+                trackColor: root.statusColor
+                labelColor: root.statusColor
+                labelSize: root.statusFontSize
+              }
             }
           }
 
@@ -747,7 +805,7 @@ Item {
             }
 
             Text {
-              visible: root.showDate && root.clockInCard
+              visible: root.showDate && root.dateInCard
               text: root.dateText
               color: root.dateColor
               font.family: Style.font.family
