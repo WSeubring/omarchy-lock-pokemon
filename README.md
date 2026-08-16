@@ -19,6 +19,11 @@ untouched. Everything visible is rewritten.
 its ANSI half-block art is parsed into rich text at runtime. No binary
 installed means no sprite and no error.
 
+**Shinies too.** `pokemon-shiny = true` swaps in the alternate palette, and the
+name picks up a ✦.
+
+![shiny Charizard](docs/shiny.jpg)
+
 **Its types drive the card.** The primary type colours the clock, the glow
 behind the sprite and the borders; a dual type turns the borders into a
 two-stop gradient and prints each type name in its own colour.

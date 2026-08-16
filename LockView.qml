@@ -460,9 +460,16 @@ Item {
       onStreamFinished: {
         var lines = String(text).split("\n")
         if (lines.length < 2) { root.pokemonLabel = ""; root.pokemonArt = ""; root.pokemonTypes = []; return }
-        var name = lines.shift().trim()
-        root.pokemonLabel = name.length > 0 ? name.charAt(0).toUpperCase() + name.slice(1) : ""
-        root.pokemonTypes = root.typeTable[name] || []
+        // The title line carries a suffix for alternate art — "charizard
+        // (shiny)" — which is not a key in types.json, so strip it before the
+        // lookup and mark it with a star instead.
+        var title = lines.shift().trim()
+        var name = title.replace(/\s*\(.*\)\s*$/, "")
+        var alternate = name !== title
+        root.pokemonLabel = name.length > 0
+          ? name.charAt(0).toUpperCase() + name.slice(1) + (alternate ? " ✦" : "")
+          : ""
+        root.pokemonTypes = root.typeTable[name.toLowerCase()] || []
         root.pokemonArt = Ansi.toRichText(lines.join("\n"), root.pokemonFontSize)
       }
     }
