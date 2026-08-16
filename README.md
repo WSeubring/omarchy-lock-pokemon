@@ -18,10 +18,12 @@ the right, password field across the bottom, status in the footer.
 - **The Pokémon's types drive the chrome.** Its primary type colors the clock,
   the glow behind the sprite and both borders; a dual type turns the borders
   into a two-stop gradient, and the type line under the name spells it out.
-- **Ambient motion per type**: fire drifts embers upward, water and poison send
-  up bubbles, grass drops leaves, ice drops flakes, ghost and dark trail wisps,
-  psychic / bug / dragon / fairy twinkle. Flying types make the sprite hover;
-  electric types flick the card edge every few seconds. The rest stay still.
+- **A distinct ambient effect for all eighteen types** — no two share one.
+  Embers, bubbles, leaves, flakes, wisps, twinkles, smog, grit, gusts, sparks,
+  shockwave rings, psychic ripples, orbiting rubble, a dragon vortex, dark
+  pools, steel plates, bug flit and dust motes. Three also carry a trait on
+  top: flying hovers the sprite, electric flicks the card edge, ground rumbles
+  the card. Dual types layer the second type's effect behind the first.
 - **Clock, date and greeting** — the greeting follows the time of day, or takes a
   literal line with `{name}` / `{pokemon}` placeholders.
 - **Status footer**: battery, uptime, keyboard layout. Each entry disappears when
@@ -96,6 +98,9 @@ right under a theme that says nothing about the lock screen.
 | `pokemon-types` | `show` | Type colors on clock, glow and borders |
 | `pokemon-effects` | `show` | Ambient motion, sprite bob, border flicker |
 | `effect-intensity` | `1.0` | Scales the number of ambient shapes (`0` = none) |
+| `effect-variant` | `1` | `1` calm, `2` busy, `3` bold; per effect with `effect-variant-<name>` |
+| `dual-effects` | `show` | Layer the second type's effect behind the first |
+| `dual-effect-strength` | `0.55` | Density of that second layer |
 | `layout` | `card` | Where the clock sits: `card`, `clock-above`, `hero`, `ghost`, `corner` |
 | `ghost-opacity`, `ghost-scale` | `0.2`, `3.4` | Watermark clock in `ghost` layout |
 | `card-tint` | `0.14` | How much of the active theme's accent is mixed into the card fill |

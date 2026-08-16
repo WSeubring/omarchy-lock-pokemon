@@ -177,6 +177,17 @@ Item {
   readonly property bool typeAccents: flagToken("pokemon-types", true)
   readonly property bool typeEffects: flagToken("pokemon-effects", true)
   readonly property real effectIntensity: Math.max(0, Math.min(2, numberToken("effect-intensity", 1.0)))
+  // Each effect ships three takes (see Effects.js). `effect-variant` picks one
+  // for every type; `effect-variant-<kind>` overrides it for a single effect,
+  // e.g. `effect-variant-embers = 3`.
+  readonly property int effectVariant: variantFor(ambientKind)
+  readonly property int secondaryVariant: variantFor(secondaryKind)
+
+  function variantFor(kind) {
+    var perKind = numberToken("effect-variant-" + kind, 0)
+    if (perKind >= 1) return Math.round(perKind)
+    return Math.round(numberToken("effect-variant", 1))
+  }
 
   property string pokemonLabel: ""
   property string pokemonArt: ""
@@ -192,8 +203,20 @@ Item {
     : ""
   readonly property string typeLabel: Types.label(pokemonTypes)
   readonly property string ambientKind: typeEffects && pokemonTypes.length > 0 ? Types.effect(pokemonTypes) : "none"
+  // A dual type layers its second effect underneath the first, at a lower
+  // density so the card reads as one atmosphere rather than two competing
+  // weathers. `dual-effects = hide` goes back to primary-only.
+  readonly property bool dualEffects: flagToken("dual-effects", true)
+  readonly property string secondaryKind: (typeEffects && dualEffects && pokemonTypes.length > 1)
+    ? Types.secondaryEffect(pokemonTypes) : "none"
+  readonly property color secondaryAccent: pokemonTypes.length > 1
+    ? Types.color(pokemonTypes[1], accentColor) : accentColor
+  readonly property real dualStrength: Math.max(0, Math.min(1, numberToken("dual-effect-strength", 0.55)))
   readonly property bool spriteBobs: typeEffects && Types.trait(pokemonTypes, "bob")
   readonly property bool borderFlickers: typeEffects && Types.trait(pokemonTypes, "flicker")
+  // Ground types shake the card every few seconds — small enough to register
+  // as a rumble rather than a glitch.
+  readonly property bool cardTrembles: typeEffects && Types.trait(pokemonTypes, "tremor")
 
   // -------------------------------------------------------- border emphasis
 
@@ -604,7 +627,7 @@ Item {
       width: root.cardWidth
       height: cardContent.implicitHeight + root.cardPadding * 2
       anchors.centerIn: parent
-      anchors.horizontalCenterOffset: shakeOffset
+      anchors.horizontalCenterOffset: shakeOffset + tremorOffset
       // `hero` drops the card below centre to leave the clock the top half.
       anchors.verticalCenterOffset: root.layoutMode === "hero" ? Math.round(root.height * 0.12) : 0
       color: root.cardColor
@@ -617,6 +640,22 @@ Item {
       // peripherally.
       property real shakeOffset: 0
 
+      // Earthquake rumble for ground types, on its own offset so it never
+      // fights the wrong-password shake.
+      property real tremorOffset: 0
+
+      SequentialAnimation {
+        running: root.cardTrembles
+        loops: Animation.Infinite
+        PauseAnimation { duration: 7000 }
+        SequentialAnimation {
+          loops: 3
+          NumberAnimation { target: card; property: "tremorOffset"; to: -2; duration: 55 }
+          NumberAnimation { target: card; property: "tremorOffset"; to: 2; duration: 70 }
+        }
+        NumberAnimation { target: card; property: "tremorOffset"; to: 0; duration: 60 }
+      }
+
       SequentialAnimation {
         id: shakeAnimation
         loops: 2
@@ -626,9 +665,19 @@ Item {
       }
 
       // Ambient type motion, behind everything and clipped to the card.
+      // Secondary type first, so the primary's motion sits in front of it.
+      Ambient {
+        anchors.fill: parent
+        kind: root.secondaryKind
+        variant: root.secondaryVariant
+        tint: root.secondaryAccent
+        intensity: root.effectIntensity * root.dualStrength
+      }
+
       Ambient {
         anchors.fill: parent
         kind: root.ambientKind
+        variant: root.effectVariant
         tint: root.accentColor
         intensity: root.effectIntensity
       }
