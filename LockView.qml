@@ -87,8 +87,8 @@ Item {
 
   // Border spec from a raw color/gradient string, for the two surfaces whose
   // border can come from the Pokémon's types instead of the theme.
-  function specFrom(raw, fallbackColor, width) {
-    var resolved = Border.borderValue(String(raw), fallbackColor, 1.0, "")
+  function specFrom(raw, fallbackColor, width, opacity) {
+    var resolved = Border.borderValue(String(raw), fallbackColor, opacity === undefined ? 1.0 : opacity, "")
     return Border.withWidth({ color: resolved.color, gradient: resolved.gradient }, width)
   }
 
@@ -164,16 +164,63 @@ Item {
   readonly property bool spriteBobs: typeEffects && Types.trait(pokemonTypes, "bob")
   readonly property bool borderFlickers: typeEffects && Types.trait(pokemonTypes, "flicker")
 
-  // Card and field borders: the Pokémon's types when it has them, the theme's
-  // own [lock] border otherwise.
-  readonly property var cardBorderSpec: typeGradient.length > 0
-    ? specFrom(typeGradient, accentColor, 2)
-    : Border.surfaceSpec("lock", "border", Color.lock.border, 2, "border-alpha")
+  // -------------------------------------------------------- border emphasis
+
+  // Card and field both carrying a full-strength type gradient gives the eye no
+  // ranking, and the card starts reading as a second input. `border-emphasis`
+  // picks how the two relate:
+  //
+  //   even       both borders equal — the original treatment
+  //   card-quiet card hairline at low alpha, field keeps the type gradient
+  //   soft-card  no card border at all, just fill and a drop shadow
+  //   split      card takes the theme's gradient, field takes the type's
+  //   state      card hairline; the field thickens and lights up while typing
+  readonly property string borderEmphasis: token("border-emphasis", "card-quiet").toLowerCase()
+
+  readonly property real cardBorderWidth: {
+    switch (borderEmphasis) {
+      case "soft-card": return 0
+      case "card-quiet": case "state": return 1
+    }
+    return 2
+  }
+  readonly property real cardBorderAlpha: (borderEmphasis === "card-quiet" || borderEmphasis === "state") ? 0.35 : 1.0
+  readonly property bool cardHasShadow: borderEmphasis === "soft-card"
+  // `split` hands the card the theme's own active-border so the constant
+  // (your desktop) and the variable (today's Pokémon) read as different things.
+  readonly property string cardBorderSource: borderEmphasis === "split"
+    ? Border.resolveValueRef(token("border", "hyprland.active-border"))
+    : typeGradient
+
+  readonly property var cardBorderSpec: cardBorderWidth <= 0
+    ? Border.none()
+    : (cardBorderSource.length > 0
+      ? specFrom(cardBorderSource, accentColor, cardBorderWidth, cardBorderAlpha)
+      : Border.withWidth(Border.surfaceSpec("lock", "border", Color.lock.border, cardBorderWidth, "border-alpha"), cardBorderWidth))
+
+  // In `state` the field rests as a hairline and grows while it is being used,
+  // so the loudest thing on screen is always the thing you are doing.
+  property real fieldBorderWidth: outlineThickness
+  readonly property real fieldRestWidth: borderEmphasis === "state" ? 1 : outlineThickness
+  readonly property real fieldActiveWidth: outlineThickness
+  readonly property bool fieldEngaged: passwordInput.activeFocus && (passwordInput.text.length > 0 || authenticatingPassword)
+  readonly property real fieldBorderAlpha: borderEmphasis === "state" && !fieldEngaged ? 0.55 : 1.0
+
+  Binding {
+    target: root
+    property: "fieldBorderWidth"
+    value: root.fieldEngaged ? root.fieldActiveWidth : root.fieldRestWidth
+  }
+
+  Behavior on fieldBorderWidth {
+    NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+  }
+
   readonly property var inputBorderSpec: errorState
     ? Border.surfaceSpec("lock", "border-error", Color.lock.borderError, outlineThickness, "border-alpha")
     : (typeGradient.length > 0
-      ? specFrom(typeGradient, accentColor, outlineThickness)
-      : Border.surfaceSpec("lock", "border-active", Color.lock.borderActive, outlineThickness, "border-alpha"))
+      ? specFrom(typeGradient, accentColor, fieldBorderWidth, fieldBorderAlpha)
+      : Border.withWidth(Border.surfaceSpec("lock", "border-active", Color.lock.borderActive, fieldBorderWidth, "border-alpha"), fieldBorderWidth))
 
   // ------------------------------------------------------------ status strip
 
@@ -426,6 +473,25 @@ Item {
       hoverEnabled: true
       onClicked: { root.wakeRequested(); root.forcePasswordFocus() }
       onPositionChanged: root.wakeRequested()
+    }
+
+    // Borderless cards need something to sit on, or they dissolve into a busy
+    // wallpaper. Drawn as a sibling behind the card so the card itself never
+    // has to become a layer.
+    Rectangle {
+      visible: root.cardHasShadow
+      width: card.width
+      height: card.height
+      x: card.x
+      y: card.y + 10
+      radius: card.radius
+      color: Qt.rgba(0, 0, 0, 0.55)
+      layer.enabled: visible
+      layer.effect: MultiEffect {
+        blurEnabled: true
+        blur: 1.0
+        blurMax: 48
+      }
     }
 
     BorderSurface {

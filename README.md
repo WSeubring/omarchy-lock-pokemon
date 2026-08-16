@@ -90,6 +90,7 @@ right under a theme that says nothing about the lock screen.
 | `pokemon-types` | `show` | Type colors on clock, glow and borders |
 | `pokemon-effects` | `show` | Ambient motion, sprite bob, border flicker |
 | `effect-intensity` | `1.0` | Scales the number of ambient shapes (`0` = none) |
+| `border-emphasis` | `card-quiet` | How the card ranks against the field: `even`, `card-quiet`, `soft-card`, `split`, `state` |
 | `card-width` | `min(720, 55%)` | px |
 | `card-padding`, `card-alpha` | `30`, `0.82` | Card inset and opacity |
 | `field-height` | `60` | Password field height (it spans the card) |
