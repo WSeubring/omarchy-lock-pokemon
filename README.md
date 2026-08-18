@@ -1,5 +1,8 @@
 # Pokémon Lock Screen
 
+> **Disclaimer:** vibe-coded for my own machine. Personal use, no support,
+> no guarantees - read the code before you run it.
+
 A lock screen plugin for [Omarchy](https://omarchy.org/) 4's Quickshell shell.
 A Pokémon greets you, its types colour the card and stir the air behind it, and
 your battery reads as its HP.
