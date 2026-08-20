@@ -38,10 +38,21 @@ yay -S pokemon-colorscripts-git
 ## Install
 
 ```bash
-git clone https://github.com/WSeubring/omarchy-lock-pokemon ~/.config/omarchy/plugins/wseubring.lock
-omarchy plugin disable omarchy.lock
-omarchy restart shell
+omarchy plugin add https://github.com/WSeubring/omarchy-lock-pokemon --enable
 ```
+
+The manifest declares `clonedFrom: omarchy.lock`, so enabling this plugin
+disables the stock lock screen automatically, and disabling it brings the
+stock one back. No manual `omarchy plugin disable omarchy.lock` needed.
+
+Update later with:
+
+```bash
+omarchy plugin update wseubring.lock
+```
+
+Remove with `omarchy plugin remove wseubring.lock`; the stock lock screen is
+restored when the plugin is disabled.
 
 The plugin id is `wseubring.lock`. To use your own namespace, rename the
 directory and the `id` in `manifest.json` together.
