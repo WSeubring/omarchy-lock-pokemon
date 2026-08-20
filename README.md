@@ -48,13 +48,13 @@ stock one back. No manual `omarchy plugin disable omarchy.lock` needed.
 Update later with:
 
 ```bash
-omarchy plugin update wseubring.lock
+omarchy plugin update pokemon.lock
 ```
 
-Remove with `omarchy plugin remove wseubring.lock`; the stock lock screen is
+Remove with `omarchy plugin remove pokemon.lock`; the stock lock screen is
 restored when the plugin is disabled.
 
-The plugin id is `wseubring.lock`. To use your own namespace, rename the
+The plugin id is `pokemon.lock`. To use your own namespace, rename the
 directory and the `id` in `manifest.json` together.
 
 Preview it without locking the session:
